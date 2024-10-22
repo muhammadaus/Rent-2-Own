@@ -1,7 +1,7 @@
    // components/Button.tsx
-   import { Button } from '@shadcn/ui';
+   import Button from '@mui/material/Button';
 
-   const MyButton = () => {
+   export const MyButton = () => {
      return (
        <Button>
          Click Me
