@@ -23,7 +23,7 @@ export default function Home() {
       <CarouselItem key={index}>
         <div className="p-[10px]">
           <Card className="shadow-none">
-            <CardContent className="flex aspect-square items-center justify-center p-4">
+            <CardContent img="" className="flex aspect-square items-center justify-center p-4">
               <span className="text-3xl font-base">{index + 1}</span>
             </CardContent>
           </Card>
