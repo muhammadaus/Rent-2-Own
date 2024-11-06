@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract SecureRentToOwn is ReentrancyGuard, Ownable {
+contract RentToOwn is ReentrancyGuard, Ownable {
     struct Agreement {
         address borrower;
         address lender;
@@ -21,9 +21,6 @@ contract SecureRentToOwn is ReentrancyGuard, Ownable {
     mapping(uint256 => Agreement) public agreements;
     uint256 public agreementCounter;
 
-    // Track NFTs held by the contract
-    mapping(address => mapping(uint256 => bool)) public heldNFTs;
-
     event AgreementCreated(
         uint256 agreementId,
         address lender,
@@ -36,6 +33,7 @@ contract SecureRentToOwn is ReentrancyGuard, Ownable {
     event AgreementCompleted(uint256 agreementId, address newOwner);
     event AgreementDefaulted(uint256 agreementId);
 
+    // Lender lists NFT for rent-to-own
     function listNFT(
         address _nftContract,
         uint256 _nftId,
@@ -45,9 +43,8 @@ contract SecureRentToOwn is ReentrancyGuard, Ownable {
         require(_monthlyPayment > 0, "Payment must be greater than 0");
         require(_numberOfPayments > 0, "Number of payments must be greater than 0");
 
-        // Transfer NFT to contract and track it
+        // Transfer NFT to contract
         IERC721(_nftContract).transferFrom(msg.sender, address(this), _nftId);
-        heldNFTs[_nftContract][_nftId] = true;
 
         uint256 totalPrice = _monthlyPayment * _numberOfPayments;
         uint256 agreementId = agreementCounter++;
@@ -74,6 +71,7 @@ contract SecureRentToOwn is ReentrancyGuard, Ownable {
         );
     }
 
+    // Borrower starts the agreement with first payment
     function startAgreement(uint256 _agreementId) external payable nonReentrant {
         Agreement storage agreement = agreements[_agreementId];
         require(agreement.isActive, "Agreement not active");
@@ -84,16 +82,18 @@ contract SecureRentToOwn is ReentrancyGuard, Ownable {
         agreement.nextPaymentDue = block.timestamp + 30 days;
         agreement.totalPaid = msg.value;
 
-        // Store payment in contract
-        // Payment is not immediately sent to lender
-        
-        emit PaymentMade(
-            _agreementId,
-            msg.value,
-            agreement.totalPrice - agreement.totalPaid
+        // Transfer payment to lender
+        payable(agreement.lender).transfer(msg.value);
+
+        // Transfer NFT to borrower
+        IERC721(agreement.nftContract).transferFrom(
+            address(this),
+            msg.sender,
+            agreement.nftId
         );
     }
 
+    // Make monthly payment
     function makePayment(uint256 _agreementId) external payable nonReentrant {
         Agreement storage agreement = agreements[_agreementId];
         require(agreement.isActive, "Agreement not active");
@@ -104,6 +104,9 @@ contract SecureRentToOwn is ReentrancyGuard, Ownable {
         agreement.totalPaid += msg.value;
         agreement.nextPaymentDue += 30 days;
 
+        // Transfer payment to lender
+        payable(agreement.lender).transfer(msg.value);
+
         emit PaymentMade(
             _agreementId,
             msg.value,
@@ -112,22 +115,12 @@ contract SecureRentToOwn is ReentrancyGuard, Ownable {
 
         // Check if fully paid
         if (agreement.totalPaid >= agreement.totalPrice) {
-            // Transfer NFT to borrower upon full payment
-            IERC721(agreement.nftContract).transferFrom(
-                address(this),
-                agreement.borrower,
-                agreement.nftId
-            );
-            heldNFTs[agreement.nftContract][agreement.nftId] = false;
-            
-            // Transfer all payments to lender
-            payable(agreement.lender).transfer(agreement.totalPrice);
-            
             agreement.isActive = false;
             emit AgreementCompleted(_agreementId, agreement.borrower);
         }
     }
 
+    // Handle default (can be called by lender)
     function handleDefault(uint256 _agreementId) external nonReentrant {
         Agreement storage agreement = agreements[_agreementId];
         require(agreement.isActive, "Agreement not active");
@@ -136,39 +129,18 @@ contract SecureRentToOwn is ReentrancyGuard, Ownable {
 
         // Transfer NFT back to lender
         IERC721(agreement.nftContract).transferFrom(
-            address(this),
+            agreement.borrower,
             agreement.lender,
             agreement.nftId
         );
-        heldNFTs[agreement.nftContract][agreement.nftId] = false;
-
-        // Transfer any paid amounts to lender
-        if (agreement.totalPaid > 0) {
-            payable(agreement.lender).transfer(agreement.totalPaid);
-        }
 
         agreement.isActive = false;
         emit AgreementDefaulted(_agreementId);
     }
 
-    // Allow lender to withdraw available payments
-    function withdrawPayments(uint256 _agreementId) external nonReentrant {
-        Agreement storage agreement = agreements[_agreementId];
-        require(msg.sender == agreement.lender, "Not the lender");
-        require(agreement.totalPaid > 0, "No payments to withdraw");
-
-        uint256 amount = agreement.totalPaid;
-        agreement.totalPaid = 0;
-        payable(agreement.lender).transfer(amount);
-    }
-
-    // View functions
+    // View remaining balance
     function getRemainingBalance(uint256 _agreementId) external view returns (uint256) {
         Agreement storage agreement = agreements[_agreementId];
         return agreement.totalPrice - agreement.totalPaid;
-    }
-
-    function getNFTHolder(address _nftContract, uint256 _nftId) external view returns (address) {
-        return IERC721(_nftContract).ownerOf(_nftId);
     }
 }
