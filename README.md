@@ -73,7 +73,7 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/yourusername/rent-2-own.git
+   git clone https://github.com/muhammadaus/rent-2-own.git
    cd rent-2-own
    ```
 
