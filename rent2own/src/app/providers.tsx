@@ -9,8 +9,8 @@ import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
 const config = createConfig({
   chains: [mainnet, sepolia],
   transports: {
-    [mainnet.id]: http(`https://eth-mainnet.alchemyapi.io/v2/6hQXqTWnhfkg0dldNoqwrB2Eq2Xajdgl`),
-    [sepolia.id]: http(`https://eth-sepolia.alchemyapi.io/v2/6hQXqTWnhfkg0dldNoqwrB2Eq2Xajdgl`),
+    [mainnet.id]: http(`https://eth-mainnet.alchemyapi.io/v2/ALCHEMY_API_KEY`),
+    [sepolia.id]: http(`https://eth-sepolia.alchemyapi.io/v2/ALCHEMY_API_KEY`),
   },
 })
 
