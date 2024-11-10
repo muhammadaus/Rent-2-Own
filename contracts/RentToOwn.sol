@@ -46,6 +46,12 @@ contract RentToOwn is ReentrancyGuard, Ownable {
         // Transfer NFT to contract
         IERC721(_nftContract).transferFrom(msg.sender, address(this), _nftId);
 
+        // Verify transfer was successful
+        require(
+            IERC721(_nftContract).ownerOf(_nftId) == address(this),
+            "NFT transfer to contract failed"
+        );
+
         uint256 totalPrice = _monthlyPayment * _numberOfPayments;
         uint256 agreementId = agreementCounter++;
 
@@ -85,11 +91,10 @@ contract RentToOwn is ReentrancyGuard, Ownable {
         // Transfer payment to lender
         payable(agreement.lender).transfer(msg.value);
 
-        // Transfer NFT to borrower
-        IERC721(agreement.nftContract).transferFrom(
-            address(this),
-            msg.sender,
-            agreement.nftId
+        emit PaymentMade(
+            _agreementId,
+            msg.value,
+            agreement.totalPrice - agreement.totalPaid
         );
     }
 
@@ -116,6 +121,12 @@ contract RentToOwn is ReentrancyGuard, Ownable {
         // Check if fully paid
         if (agreement.totalPaid >= agreement.totalPrice) {
             agreement.isActive = false;
+            // Only transfer NFT to borrower after full payment
+            IERC721(agreement.nftContract).transferFrom(
+                address(this),
+                agreement.borrower,
+                agreement.nftId
+            );
             emit AgreementCompleted(_agreementId, agreement.borrower);
         }
     }
