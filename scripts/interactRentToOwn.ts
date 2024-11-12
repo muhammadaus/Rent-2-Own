@@ -23,6 +23,8 @@ async function main() {
   const tokenId = Number(await myNFT.getCurrentTokenId()) - 1;
   console.log("NFT minted to lender at:", lender.address, "with tokenId:", tokenId.toString());
 
+
+
   // Lender approves RentToOwn contract
   await myNFT.connect(lender).approve(rentToOwn.address, tokenId);
   console.log("RentToOwn contract approved to transfer NFT");
