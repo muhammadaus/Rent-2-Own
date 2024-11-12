@@ -28,9 +28,11 @@ describe("RentToOwn", function () {
     // Setup test variables
     monthlyPayment = ethers.utils.parseEther("0.1");
 
-    // Mint NFT to lender
-    await myNFT.connect(lender).safeMint(lender.address);
-    tokenId = Number(await myNFT.getCurrentTokenId()) - 1;
+    // Mint NFT to lender with a token URI
+    const tokenURI = "https://example.com/metadata/1"; // Example token URI
+    await myNFT.connect(lender).safeMint(lender.address, tokenURI); // Pass the token URI
+    tokenId = await myNFT.getCurrentTokenId(); // Get the current token ID after minting
+    tokenId--; // Adjust tokenId since it increments after minting
   });
 
   describe("Listing NFT", function () {

@@ -18,9 +18,10 @@ async function main() {
   await rentToOwn.deployed();
   console.log("RentToOwn deployed to:", rentToOwn.address);
   
-  // Mint NFT to lender
-  await myNFT.connect(lender).safeMint(lender.address);
-  const tokenId = Number(await myNFT.getCurrentTokenId()) - 1;
+  // Mint NFT to lender with a token URI
+  const tokenURI = "https://example.com/metadata/1"; // Replace with actual metadata URI
+  await myNFT.connect(lender).safeMint(lender.address, tokenURI);
+  const tokenId = Number(await myNFT.getCurrentTokenId()) - 1; // Get the last minted token ID
   console.log("NFT minted to lender at:", lender.address, "with tokenId:", tokenId.toString());
 }
 

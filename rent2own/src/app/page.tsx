@@ -10,12 +10,12 @@ export default function Home() {
       <div className="flex space-x-4">
         <Link href="/borrow">
           <button className="flex-1 px-6 py-3 bg-gray-800 text-white rounded-lg shadow-md hover:bg-gray-700 transition duration-300">
-            Renter
+            Borrower
           </button>
         </Link>
         <Link href="/lend">
           <button className="flex-1 px-6 py-3 bg-gray-800 text-white rounded-lg shadow-md hover:bg-gray-700 transition duration-300">
-            Supplier
+            Lender
           </button>
         </Link>
       </div>
