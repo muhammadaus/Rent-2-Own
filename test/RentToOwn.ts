@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { RentToOwn, MyNFT } from "../typechain-types";
 
@@ -8,7 +9,7 @@ describe("RentToOwn", function () {
   let myNFT: MyNFT;
   let lender: SignerWithAddress;
   let borrower: SignerWithAddress;
-  let tokenId: number;
+  let tokenId: BigNumber;
   let monthlyPayment: any;
 
   beforeEach(async function () {
@@ -16,13 +17,13 @@ describe("RentToOwn", function () {
     [lender, borrower] = await ethers.getSigners();
 
     // Deploy NFT contract
-    const MyNFT = await ethers.getContractFactory("MyNFT");
-    myNFT = await MyNFT.deploy();
+    const MyNFTFactory = await ethers.getContractFactory("MyNFT");
+    myNFT = await MyNFTFactory.deploy() as MyNFT;
     await myNFT.deployed();
 
     // Deploy RentToOwn contract
-    const RentToOwn = await ethers.getContractFactory("RentToOwn");
-    rentToOwn = await RentToOwn.deploy();
+    const RentToOwnFactory = await ethers.getContractFactory("RentToOwn");
+    rentToOwn = await RentToOwnFactory.deploy() as RentToOwn;
     await rentToOwn.deployed();
 
     // Setup test variables
@@ -95,7 +96,7 @@ describe("RentToOwn", function () {
     it("Should reject late payments", async function () {
       await ethers.provider.send("evm_increaseTime", [31 * 24 * 60 * 60]); // 31 days
       await ethers.provider.send("evm_mine", []);
-      
+
       await expect(
         rentToOwn.connect(borrower).makePayment(0, { value: monthlyPayment })
       ).to.be.revertedWith("Payment is late");

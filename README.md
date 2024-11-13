@@ -77,10 +77,10 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
    cd rent-2-own
    ```
 
-2. **Initialize npm and Install Dependencies:**
+2. **Initialize pnpm and Install Dependencies:**
 
    ```bash
-   npm install
+   pnpm install
    ```
 
    This command installs all necessary dependencies, including Hardhat and OpenZeppelin contracts.
