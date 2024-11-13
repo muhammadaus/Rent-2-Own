@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "cd frontend && npm start",
+    "dev": "cd frontend && npm run dev",
+    "install": "cd frontend && npm install"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +16,7 @@
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "hardhat": "^2.12.0"
   },
+  "private": true,
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.6"
   }

@@ -1,4 +1,4 @@
-# Rent-2-Own
+# Rent-2-Own(under development)
 Taiko The Grant Factory Hackathon Project
 
 # Rent2Own NFT Platform
@@ -90,11 +90,9 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
    Create a `.env` file in the root directory and add your environment variables.
 
    ```env
-   PRIVATE_KEY=your_wallet_private_key
-   SEPOLIA_RPC_URL=your_sepolia_rpc_url
-   MAINNET_RPC_URL=your_mainnet_rpc_url
-   ETHERSCAN_API_KEY=your_etherscan_api_key
-   COINMARKETCAP_API_KEY=your_coinmarketcap_api_key
+   PRIVATE_KEY = your_wallet_private_key
+   SEPOLIA_RPC_URL = https://rpc.hekla.taiko.xyz
+   MAINNET_RPC_UR L = https://rpc.mainnet.taiko.xyz
    ```
 
    **Note:** Never commit your `.env` file to version control. Add it to `.gitignore`.
@@ -114,37 +112,12 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
    In a new terminal window, run:
 
    ```bash
-   npx hardhat run scripts/deployRent2Own.ts --network localhost
-   ```
-
-   **Output:**
-
-   ```
-   Deploying RentToOwn...
-   RentToOwn deployed to: 0xYourContractAddress
-   ```
-
-### Testnet Deployment (e.g., Sepolia)
-
-1. **Ensure Your `.env` is Configured:**
-
-   Make sure `SEPOLIA_RPC_URL` and `PRIVATE_KEY` are set in your `.env` file.
-
-2. **Deploy the Contract:**
-
-   ```bash
-   npx hardhat run scripts/deployRent2Own.ts --network sepolia
-   ```
-
-3. **Verify the Contract on Etherscan (Optional):**
-
-   If deployed on a public network, you can verify your contract:
-
-   ```bash
-   npx hardhat verify --network sepolia <Your_Contract_Address>
+   npx hardhat run scripts/interactRent2Own.ts --network localhost
    ```
 
 ## Usage
+
+
 
 ### For Lenders
 
@@ -157,28 +130,11 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
      - `_monthlyPayment`: Amount to be paid monthly (in wei).
      - `_numberOfPayments`: Total number of payments to own the NFT.
 
-   **Example:**
-
-   ```javascript
-   await rentToOwn.listNFT(
-     "0xNFTContractAddress",
-     1,
-     ethers.utils.parseEther("0.1"),
-     12
-   );
-   ```
-
 2. **Withdraw Payments:**
 
    - **Function:** `withdrawPayments`
    - **Parameters:**
      - `_agreementId`: ID of the rental agreement.
-
-   **Example:**
-
-   ```javascript
-   await rentToOwn.withdrawPayments(0);
-   ```
 
 ### For Borrowers
 
@@ -189,12 +145,6 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
      - `_agreementId`: ID of the rental agreement.
    - **Value:** Send the first monthly payment amount.
 
-   **Example:**
-
-   ```javascript
-   await rentToOwn.startAgreement(0, { value: ethers.utils.parseEther("0.1") });
-   ```
-
 2. **Make a Monthly Payment:**
 
    - **Function:** `makePayment`
@@ -202,11 +152,6 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
      - `_agreementId`: ID of the rental agreement.
    - **Value:** Send the monthly payment amount.
 
-   **Example:**
-
-   ```javascript
-   await rentToOwn.makePayment(0, { value: ethers.utils.parseEther("0.1") });
-   ```
 
 ### Handling Defaults
 
@@ -214,10 +159,6 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
 - **Parameters:**
   - `_agreementId`: ID of the rental agreement.
 - **Access:** Only the lender can invoke this function.
-
-```javascript
-await rentToOwn.handleDefault(0);
-```
 
 
 ## Security
