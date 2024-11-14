@@ -3,6 +3,8 @@ Taiko The Grant Factory Hackathon Project
 
 # Rent2Own NFT Platform
 
+///
+
 Rent2Own is a decentralized platform that allows users to rent NFTs with the option to own them after fulfilling payment obligations. This innovative solution bridges the gap between renting and owning, making high-value NFTs more accessible to a broader audience.
 
 ## Table of Contents
