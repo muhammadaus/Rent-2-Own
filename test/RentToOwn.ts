@@ -14,25 +14,27 @@ describe("RentToOwn", function () {
   beforeEach(async function () {
     // Get signers
     [lender, borrower] = await ethers.getSigners();
+    console.log("Lender:", lender.address);
 
     // Deploy NFT contract
-    const MyNFT = await ethers.getContractFactory("MyNFT");
-    myNFT = await MyNFT.deploy();
-    await myNFT.deployed();
+    const MyNFTFactory = await ethers.getContractFactory("MyNFT");
+    myNFT = await MyNFTFactory.deploy();
+    console.log("MyNFT deployed to:", myNFT.address);
 
     // Deploy RentToOwn contract
-    const RentToOwn = await ethers.getContractFactory("RentToOwn");
-    rentToOwn = await RentToOwn.deploy();
-    await rentToOwn.deployed();
+    const RentToOwnFactory = await ethers.getContractFactory("RentToOwn");
+    rentToOwn = await RentToOwnFactory.deploy();
+    console.log("RentToOwn deployed to:", rentToOwn.address);
 
     // Setup test variables
     monthlyPayment = ethers.utils.parseEther("0.1");
 
     // Mint NFT to lender with a token URI
-    const tokenURI = "https://example.com/metadata/1"; // Example token URI
-    await myNFT.connect(lender).safeMint(lender.address, tokenURI); // Pass the token URI
-    tokenId = await myNFT.getCurrentTokenId(); // Get the current token ID after minting
-    tokenId--; // Adjust tokenId since it increments after minting
+    const tokenURI = "https://example.com/metadata/1";
+    const mintTx = await myNFT.connect(lender).safeMint(lender.address, tokenURI);
+    const receipt = await mintTx.wait();
+    tokenId = await myNFT.getCurrentTokenId();
+    console.log("Token ID:", tokenId.toString());
   });
 
   describe("Listing NFT", function () {

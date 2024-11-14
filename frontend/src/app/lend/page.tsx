@@ -12,6 +12,8 @@ interface NFT {
     contractAddress: string; // Add this property based on your NFT structure
 }
 
+const RENT_TO_OWN_CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+
 const RentToOwnPage = () => {
     const [nfts, setNfts] = useState<NFT[]>([]); // Specify the type for nfts
     const [selectedNft, setSelectedNft] = useState<NFT | null>(null); // Specify the type for selectedNft
@@ -36,37 +38,78 @@ const RentToOwnPage = () => {
         const contract = new web3.eth.Contract(MyNftABI, contractAddress);
         
         try {
-            // Get the number of NFTs owned by the account
+            // Check if contract implements basic ERC721
+            const supportsERC721 = await contract.methods.supportsInterface('0x80ac58cd').call().catch(() => false);
+            if (!supportsERC721) {
+                throw new Error('Contract does not implement ERC721 interface');
+            }
+
             const balance = await contract.methods.balanceOf(account).call();
             const nfts: NFT[] = [];
 
-            for (let i = 0; i < balance; i++) {
-                // Get the token ID of the NFT owned by the account
-                const tokenId = await contract.methods.tokenOfOwnerByIndex(account, i).call();
-                const tokenURI = await contract.methods.tokenURI(tokenId).call(); // Get the token URI
-                const response = await fetch(tokenURI); // Fetch the metadata
-                const metadata = {
-                    name: `Mock NFT #${tokenId}`, // Example name
-                    description: "This is a mock NFT for testing purposes.", // Example description
-                    image: "https://via.placeholder.com/150", // Valid placeholder image URL
-                    attributes: [
-                        { trait_type: "Background", value: "Blue" },
-                        { trait_type: "Rarity", value: "Common" },
-                    ],
-                }; //await response.json();
+            // Try to get transfer events to this address
+            const events = await contract.getPastEvents('Transfer', {
+                filter: { to: account },
+                fromBlock: 0,
+                toBlock: 'latest'
+            });
 
-                nfts.push({
-                    name: metadata.name,
-                    tokenId: tokenId,
-                    contractAddress: contractAddress, // Use the input contract address
-                });
+            // Create a Set to track unique token IDs
+            const uniqueTokenIds = new Set();
+
+            // Process each transfer event
+            for (const event of events) {
+                const tokenId = event.returnValues.tokenId;
+                
+                try {
+                    // Check if we still own this token
+                    const currentOwner = await contract.methods.ownerOf(tokenId).call();
+                    if (currentOwner.toLowerCase() !== account.toLowerCase()) {
+                        continue; // Skip if we don't own it anymore
+                    }
+
+                    // Skip if we've already processed this token
+                    if (uniqueTokenIds.has(tokenId)) {
+                        continue;
+                    }
+                    uniqueTokenIds.add(tokenId);
+
+                    let name = `NFT #${tokenId}`;
+                    
+                    // Try to get metadata if tokenURI is available
+                    try {
+                        const tokenURI = await contract.methods.tokenURI(tokenId).call();
+                        if (tokenURI) {
+                            const formattedURI = tokenURI.startsWith('ipfs://')
+                                ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/')
+                                : tokenURI;
+                            
+                            const response = await fetch(formattedURI);
+                            if (response.ok) {
+                                const metadata = await response.json();
+                                name = metadata.name || name;
+                            }
+                        }
+                    } catch (metadataError) {
+                        console.warn(`Metadata fetch failed for token ${tokenId}:`, metadataError);
+                    }
+
+                    nfts.push({
+                        name,
+                        tokenId,
+                        contractAddress
+                    });
+                } catch (tokenError) {
+                    console.warn(`Failed to process token ${tokenId}:`, tokenError);
+                    continue;
+                }
             }
 
-            console.log('NFTs loaded:', nfts); // Log NFTs to the console
-            return nfts; // Return the array of NFTs
+            console.log('NFTs loaded:', nfts);
+            return nfts;
         } catch (error) {
             console.error('Error loading NFTs:', error);
-            return []; // Return an empty array on error
+            throw error;
         }
     };
 
@@ -76,28 +119,71 @@ const RentToOwnPage = () => {
             return;
         }
 
-        const web3 = new Web3(window.ethereum);
-        const nfts = await loadNFTs(web3, account, contractAddress);
-        setNfts(nfts);
+        try {
+            const web3 = new Web3(window.ethereum);
+            const nfts = await loadNFTs(web3, account, contractAddress);
+            setNfts(nfts);
+        } catch (error) {
+            console.error('Error loading NFTs:', error);
+            alert('Failed to load NFTs. Please check the contract address and try again.');
+        }
     };
 
     const handleLendNFT = async () => {
-        if (!selectedNft || !monthlyPayment || !numberOfPayments) return;
+        if (!selectedNft || !monthlyPayment || !numberOfPayments) {
+            alert('Please fill in all fields');
+            return;
+        }
 
         const web3 = new Web3(window.ethereum);
-        const contract = new web3.eth.Contract(RentToOwnABI, selectedNft.contractAddress);
-
+        
         try {
-            await contract.methods.listNFT(
+            // 1. First verify the NFT contract
+            const nftContract = new web3.eth.Contract(MyNftABI, selectedNft.contractAddress);
+            
+            // 2. Check if user owns the NFT
+            const owner = await nftContract.methods.ownerOf(selectedNft.tokenId).call();
+            if (owner.toLowerCase() !== account.toLowerCase()) {
+                alert('You do not own this NFT');
+                return;
+            }
+
+            // 3. Get the RentToOwn contract using the constant
+            const rentToOwnContract = new web3.eth.Contract(RentToOwnABI, RENT_TO_OWN_CONTRACT_ADDRESS);
+            
+            // 4. Approve the NFT transfer
+            console.log('Approving NFT transfer...');
+            const approveTx = await nftContract.methods.approve(
+                RENT_TO_OWN_CONTRACT_ADDRESS, // Use the constant here too
+                selectedNft.tokenId
+            ).send({ 
+                from: account 
+            });
+            console.log('Approval transaction:', approveTx);
+
+            // 5. List the NFT
+            console.log('Listing NFT with parameters:', {
+                nftContract: selectedNft.contractAddress,
+                tokenId: selectedNft.tokenId,
+                monthlyPayment,
+                numberOfPayments
+            });
+
+            const listTx = await rentToOwnContract.methods.listNFT(
                 selectedNft.contractAddress,
                 selectedNft.tokenId,
                 web3.utils.toWei(monthlyPayment, 'ether'),
                 numberOfPayments
-            ).send({ from: account });
+            ).send({ 
+                from: account
+            });
 
+            console.log('Listing transaction:', listTx);
             alert('NFT listed successfully!');
-        } catch (error) {
-            console.error('Error listing NFT:', error);
+            
+        } catch (error: any) {
+            console.error('Error:', error);
+            alert(`Error: ${error.message}`);
         }
     };
 

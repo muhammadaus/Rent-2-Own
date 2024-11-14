@@ -7,29 +7,29 @@ async function main() {
   console.log("Borrower address:", borrower.address);
 
   // Deploy MyNFT
-  const MyNFT = await ethers.getContractFactory("MyNFT");
-  const myNFT = await MyNFT.deploy();
-  await myNFT.deployed();
+  const MyNFTFactory = await ethers.getContractFactory("MyNFT");
+  const myNFT = await MyNFTFactory.deploy();
   console.log("MyNFT deployed to:", myNFT.address);
 
   // Deploy RentToOwn
-  const RentToOwn = await ethers.getContractFactory("RentToOwn");
-  const rentToOwn = await RentToOwn.deploy();
-  await rentToOwn.deployed();
+  const RentToOwnFactory = await ethers.getContractFactory("RentToOwn");
+  const rentToOwn = await RentToOwnFactory.deploy();
   console.log("RentToOwn deployed to:", rentToOwn.address);
   
   // Mint NFT to lender with a token URI
-  const tokenURI = "https://example.com/metadata/1"; // Replace with actual metadata URI
-  await myNFT.connect(lender).safeMint(lender.address, tokenURI);
-  const tokenId = Number(await myNFT.getCurrentTokenId()) - 1; // Get the last minted token ID
-  console.log("NFT minted to lender at:", lender.address, "with tokenId:", tokenId.toString());
+  const tokenURI = "https://example.com/metadata/1";
+  const mintTx = await myNFT.connect(lender).safeMint(lender.address, tokenURI);
+  await mintTx.wait();
+  const tokenId = await myNFT.getCurrentTokenId();
+  console.log("NFT minted to lender with tokenId:", tokenId.toString());
+
+  // Setup monthly payment
+  const monthlyPayment = ethers.utils.parseEther("0.1");
+  const numberOfPayments = 12;
 
   // Lender approves RentToOwn contract
   await myNFT.connect(lender).approve(rentToOwn.address, tokenId);
   console.log("RentToOwn contract approved to transfer NFT");
-
-  const monthlyPayment = ethers.utils.parseEther("0.1");
-  const numberOfPayments = 12;
 
   // Lender lists NFT
   await rentToOwn.connect(lender).listNFT(
@@ -47,26 +47,26 @@ async function main() {
   console.log("NFT owner after agreement start:", await myNFT.ownerOf(tokenId));
 
   // Simulate 11 more monthly payments by borrower
-  for (let i = 1; i < 12; i++) {
-    await rentToOwn.connect(borrower).makePayment(0, { value: monthlyPayment });
-    console.log(`Made payment ${i + 1} of 12 by borrower`);
-    
-    await network.provider.send("evm_increaseTime", [25 * 24 * 60 * 60]); // Increase time by 25 days
-    await network.provider.send("evm_mine"); // Mine a new block
+  for (let i = 1; i < numberOfPayments; i++) {
+    // Increase time by 25 days (within the 30-day payment window)
+    await network.provider.send("evm_increaseTime", [25 * 24 * 60 * 60]);
+    await network.provider.send("evm_mine");
 
-    const isActive = (await rentToOwn.agreements(0)).isActive;
-    console.log("Agreement active:", isActive);
+    // Make payment
+    await rentToOwn.connect(borrower).makePayment(0, { value: monthlyPayment });
+    console.log(`Made payment ${i + 1} of ${numberOfPayments}`);
+
+    const agreement = await rentToOwn.agreements(0);
+    console.log("Agreement active:", agreement.isActive);
     console.log("Current NFT owner:", await myNFT.ownerOf(tokenId));
   }
 
-  await network.provider.send("evm_increaseTime", [50 * 24 * 60 * 60]); // Increase time by 50 days
-  await network.provider.send("evm_mine"); // Mine a new block
-
-  // Check final status
+  // Final status check
+  const finalAgreement = await rentToOwn.agreements(0);
+  console.log("\nFinal Status:");
+  console.log("Agreement active:", finalAgreement.isActive);
   console.log("Final NFT owner:", await myNFT.ownerOf(tokenId));
-  const isActive = (await rentToOwn.agreements(0)).isActive;
-  console.log("Agreement active:", isActive);
-  console.log("Remaining balance:", (await rentToOwn.getRemainingBalance(0)).toString());
+  console.log("Expected owner (borrower):", borrower.address);
 }
 
 main().catch((error) => {

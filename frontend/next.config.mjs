@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  }
+  webpack: (config) => {
+    config.externals.push('encoding', /* add any other modules that might be causing the error */);
+    return config;
+  },
 }
 
 export default nextConfig
