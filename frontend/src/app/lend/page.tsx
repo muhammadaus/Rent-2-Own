@@ -12,7 +12,7 @@ interface NFT {
     contractAddress: string; // Add this property based on your NFT structure
 }
 
-const RENT_TO_OWN_CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+const RENT_TO_OWN_CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; // Add this contract address manually
 
 const RentToOwnPage = () => {
     const [nfts, setNfts] = useState<NFT[]>([]); // Specify the type for nfts
