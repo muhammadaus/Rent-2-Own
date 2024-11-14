@@ -66,7 +66,8 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
 ### Prerequisites
 
 - **Node.js:** Ensure you have Node.js (v14 or later) installed.
-- **npm:** Node Package Manager comes with Node.js.
+- **pnpm:** Pnpm is similar to the Node Package Manager that comes with Node.js,
+    but it needs to be installed separately.
 
 ### Steps
 
