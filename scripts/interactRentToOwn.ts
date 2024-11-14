@@ -1,4 +1,5 @@
 import { ethers, network } from "hardhat";
+import { BigNumber } from "ethers";
 
 async function main() {
   // Get signers - first address will be lender, second will be borrower
@@ -20,12 +21,12 @@ async function main() {
   const tokenURI = "https://example.com/metadata/1";
   const mintTx = await myNFT.connect(lender).safeMint(lender.address, tokenURI);
   await mintTx.wait();
-  const tokenId = await myNFT.getCurrentTokenId();
+  const tokenId: BigNumber = await myNFT.getCurrentTokenId();
   console.log("NFT minted to lender with tokenId:", tokenId.toString());
 
   // Setup monthly payment
-  const monthlyPayment = ethers.utils.parseEther("0.1");
-  const numberOfPayments = 12;
+  const monthlyPayment: BigNumber = ethers.utils.parseEther("0.1");
+  const numberOfPayments: number = 12;
 
   // Lender approves RentToOwn contract
   await myNFT.connect(lender).approve(rentToOwn.address, tokenId);

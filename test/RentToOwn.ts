@@ -1,15 +1,21 @@
 import { expect } from "chai";
+import { solidity } from "ethereum-waffle";
+import chai from "chai";
+
+chai.use(solidity);
+
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { RentToOwn, MyNFT } from "../typechain-types";
+import { BigNumber } from "ethers";
 
 describe("RentToOwn", function () {
   let rentToOwn: RentToOwn;
   let myNFT: MyNFT;
   let lender: SignerWithAddress;
   let borrower: SignerWithAddress;
-  let tokenId: number;
-  let monthlyPayment: any;
+  let tokenId: BigNumber;
+  let monthlyPayment: BigNumber;
 
   beforeEach(async function () {
     // Get signers
