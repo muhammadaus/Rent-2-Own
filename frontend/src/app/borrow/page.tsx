@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Web3 from 'web3';
-import RentToOwnABI from './abi/RentToOwnABI.json';
+import { ethers } from 'ethers';
+import RentToOwnABI from '../abi/RentToOwnABI.json';
 
 interface Agreement {
     borrower: string;
@@ -19,54 +19,65 @@ interface Agreement {
 const RENT_TO_OWN_CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 export default function BorrowPage() {
-    const [web3, setWeb3] = useState<Web3 | null>(null);
+    const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
     const [account, setAccount] = useState<string>('');
     const [agreements, setAgreements] = useState<Array<Agreement & { id: number }>>([]);
+    const [myAgreements, setMyAgreements] = useState<Array<Agreement & { id: number }>>([]);
     const [loading, setLoading] = useState(true);
+    const [timeSkipDays, setTimeSkipDays] = useState<number>(30);
 
     useEffect(() => {
-        const initWeb3 = async () => {
+        const initEthers = async () => {
             if (typeof window.ethereum !== 'undefined') {
-                const web3Instance = new Web3(window.ethereum);
-                setWeb3(web3Instance);
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                setProvider(provider);
 
                 try {
-                    // Request account access
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    setAccount(accounts[0]);
+                    await provider.send("eth_requestAccounts", []);
+                    const signer = provider.getSigner();
+                    const address = await signer.getAddress();
+                    setAccount(address);
                 } catch (error) {
                     console.error("User denied account access");
                 }
             }
         };
 
-        initWeb3();
+        initEthers();
     }, []);
 
     useEffect(() => {
-        if (web3 && account) {
+        if (provider && account) {
             loadAgreements();
         }
-    }, [web3, account]);
+    }, [provider, account]);
 
     const loadAgreements = async () => {
-        if (!web3) return;
+        if (!provider) return;
 
-        const contract = new web3.eth.Contract(RentToOwnABI, RENT_TO_OWN_CONTRACT_ADDRESS);
+        const contract = new ethers.Contract(
+            RENT_TO_OWN_CONTRACT_ADDRESS,
+            RentToOwnABI,
+            provider
+        );
+
         try {
-            const agreementCounter = await contract.methods.agreementCounter().call();
+            const agreementCounter = await contract.agreementCounter();
+            console.log('Total agreements:', agreementCounter.toString());
+
             const loadedAgreements = [];
 
             for (let i = 0; i < agreementCounter; i++) {
-                const agreement = await contract.methods.agreements(i).call();
-                if (agreement.isActive && agreement.borrower === '0x0000000000000000000000000000000000000000') {
-                    loadedAgreements.push({
-                        ...agreement,
-                        id: i
-                    });
-                }
+                const agreement = await contract.agreements(i);
+                console.log(`Agreement ${i}:`, agreement);
+                
+                loadedAgreements.push({
+                    ...agreement,
+                    id: i
+                });
             }
 
+            console.log('Loaded agreements:', loadedAgreements);
             setAgreements(loadedAgreements);
             setLoading(false);
         } catch (error) {
@@ -76,18 +87,23 @@ export default function BorrowPage() {
     };
 
     const startAgreement = async (agreementId: number, monthlyPayment: string) => {
-        if (!web3 || !account) return;
+        if (!provider || !account) return;
 
         try {
-            const contract = new web3.eth.Contract(RentToOwnABI, RENT_TO_OWN_CONTRACT_ADDRESS);
+            const signer = provider.getSigner();
+            const contract = new ethers.Contract(
+                RENT_TO_OWN_CONTRACT_ADDRESS,
+                RentToOwnABI,
+                signer
+            );
             
-            await contract.methods.startAgreement(agreementId).send({
-                from: account,
-                value: monthlyPayment,
+            const tx = await contract.startAgreement(agreementId, {
+                value: monthlyPayment
             });
+            await tx.wait();
 
             alert('Agreement started successfully!');
-            loadAgreements(); // Reload agreements
+            loadAgreements();
         } catch (error) {
             console.error('Error starting agreement:', error);
             alert('Failed to start agreement. Please try again.');
@@ -95,48 +111,87 @@ export default function BorrowPage() {
     };
 
     const makePayment = async (agreementId: number, monthlyPayment: string) => {
-        if (!web3 || !account) return;
+        if (!provider || !account) return;
 
         try {
-            const contract = new web3.eth.Contract(RentToOwnABI, RENT_TO_OWN_CONTRACT_ADDRESS);
+            const signer = provider.getSigner();
+            const contract = new ethers.Contract(
+                RENT_TO_OWN_CONTRACT_ADDRESS,
+                RentToOwnABI,
+                signer
+            );
             
-            await contract.methods.makePayment(agreementId).send({
-                from: account,
-                value: monthlyPayment,
+            const tx = await contract.makePayment(agreementId, {
+                value: monthlyPayment
             });
+            await tx.wait();
 
             alert('Payment made successfully!');
-            loadAgreements(); // Reload agreements
+            loadAgreements();
         } catch (error) {
             console.error('Error making payment:', error);
             alert('Failed to make payment. Please try again.');
         }
     };
 
+    const skipTime = async (days: number) => {
+        if (!provider) return;
+        
+        try {
+            await provider.send("evm_increaseTime", [days * 24 * 60 * 60]);
+            await provider.send("evm_mine", []);
+            
+            alert(`Skipped ${days} days`);
+            loadAgreements();
+        } catch (error) {
+            console.error('Error skipping time:', error);
+            alert('Failed to skip time. Make sure you are on Hardhat network.');
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-8">Available NFTs for Rent-to-Own</h1>
+            <h1 className="text-3xl font-bold mb-8">NFT Rent-to-Own Agreements</h1>
             
+            <div className="mb-8 p-4 bg-gray-100 rounded">
+                <h3 className="font-bold mb-2">Development Tools (PLEASE DELETE THIS LATER!)</h3>
+                <div className="flex gap-4">
+                    <input
+                        type="number"
+                        value={timeSkipDays}
+                        onChange={(e) => setTimeSkipDays(Number(e.target.value))}
+                        className="border p-2 rounded"
+                        placeholder="Days to skip"
+                    />
+                    <button
+                        onClick={() => skipTime(timeSkipDays)}
+                        className="bg-purple-500 text-white px-4 py-2 rounded"
+                    >
+                        Skip Time
+                    </button>
+                </div>
+            </div>
+
+            <h2 className="text-2xl font-bold mb-6">Available Agreements</h2>
             {loading ? (
-                <p>Loading available agreements...</p>
-            ) : agreements.length === 0 ? (
-                <p>No available agreements found.</p>
+                <p>Loading agreements...</p>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {agreements.map((agreement) => (
+                    {agreements.filter(a => 
+                        a.isActive && a.borrower === '0x0000000000000000000000000000000000000000'
+                    ).map((agreement) => (
                         <div key={agreement.id} className="border rounded-lg p-6 shadow-lg">
                             <h2 className="text-xl font-semibold mb-4">Agreement #{agreement.id}</h2>
                             <div className="space-y-2">
                                 <p><span className="font-medium">NFT Contract:</span> {agreement.nftContract}</p>
-                                <p><span className="font-medium">NFT ID:</span> {agreement.nftId}</p>
-                                <p><span className="font-medium">Monthly Payment:</span> {web3?.utils.fromWei(agreement.monthlyPayment, 'ether')} ETH</p>
-                                <p><span className="font-medium">Total Price:</span> {web3?.utils.fromWei(agreement.totalPrice, 'ether')} ETH</p>
-                                <p><span className="font-medium">Lender:</span> {agreement.lender}</p>
+                                <p><span className="font-medium">NFT ID:</span> {agreement.nftId.toString()}</p>
+                                <p><span className="font-medium">Monthly Payment:</span> {ethers.utils.formatEther(agreement.monthlyPayment.toString())} ETH</p>
+                                <p><span className="font-medium">Total Price:</span> {ethers.utils.formatEther(agreement.totalPrice.toString())} ETH</p>
                             </div>
                             
                             <button
-                                onClick={() => startAgreement(agreement.id, agreement.monthlyPayment)}
-                                className="mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
+                                onClick={() => startAgreement(agreement.id, agreement.monthlyPayment.toString())}
+                                className="mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
                             >
                                 Start Agreement
                             </button>
@@ -145,12 +200,34 @@ export default function BorrowPage() {
                 </div>
             )}
 
-            {account && (
-                <div className="mt-12">
-                    <h2 className="text-2xl font-bold mb-6">My Active Agreements</h2>
-                    {/* Add a section to show the user's active agreements and allow making payments */}
-                </div>
-            )}
+            <h2 className="text-2xl font-bold mb-6 mt-12">My Active Agreements</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {agreements.filter(a => 
+                    a.isActive && a.borrower.toLowerCase() === account.toLowerCase()
+                ).map((agreement) => (
+                    <div key={agreement.id} className="border rounded-lg p-6 shadow-lg">
+                        <h2 className="text-xl font-semibold mb-4">Agreement #{agreement.id}</h2>
+                        <div className="space-y-2">
+                            <p><span className="font-medium">NFT Contract:</span> {agreement.nftContract}</p>
+                            <p><span className="font-medium">NFT ID:</span> {agreement.nftId.toString()}</p>
+                            <p><span className="font-medium">Monthly Payment:</span> {ethers.utils.formatEther(agreement.monthlyPayment.toString())} ETH</p>
+                            <p><span className="font-medium">Total Price:</span> {ethers.utils.formatEther(agreement.totalPrice.toString())} ETH</p>
+                            <p><span className="font-medium">Total Paid:</span> {ethers.utils.formatEther(agreement.totalPaid.toString())} ETH</p>
+                            <p><span className="font-medium">Next Payment Due:</span> {new Date(Number(agreement.nextPaymentDue.toString()) * 1000).toLocaleDateString()}</p>
+                            <p><span className="font-medium">Remaining:</span> {ethers.utils.formatEther(
+                                agreement.totalPrice.sub(agreement.totalPaid).toString()
+                            )} ETH</p>
+                        </div>
+                        
+                        <button
+                            onClick={() => makePayment(agreement.id, agreement.monthlyPayment.toString())}
+                            className="mt-4 w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+                        >
+                            Make Payment
+                        </button>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

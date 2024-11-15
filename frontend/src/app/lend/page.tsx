@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import Web3 from 'web3'; // or import { ethers } from 'ethers';
-import RentToOwnABI from './RentToOwnABI.json'; // Import the ABI of your contract
-import MyNftABI from './MyNftABI.json'; // Import the ABI of your contract
+import { ethers } from 'ethers';
+import RentToOwnABI from '../abi/RentToOwnABI.json'; // Import the ABI of your contract
+import MyNftABI from '../abi/MyNftABI.json'; // Import the ABI of your contract
 
 // Define the NFT type
 interface NFT {
@@ -25,90 +25,64 @@ const RentToOwnPage = () => {
     useEffect(() => {
         const loadBlockchainData = async () => {
             if (window.ethereum) {
-                const web3 = new Web3(window.ethereum);
-                const accounts = await web3.eth.requestAccounts();
-                setAccount(accounts[0]);
+                try {
+                    // Request network switch to localhost
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: '0x7A69' }], // 31337 in hex for Hardhat
+                    });
+
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const signer = provider.getSigner();
+                    const accounts = await signer.getAddress();
+                    setAccount(accounts);
+
+                    // Verify network
+                    const network = await provider.getNetwork();
+                    console.log('Connected to network:', network.chainId);
+                    
+                    if (network.chainId !== 31337) {
+                        alert('Please connect to Hardhat network (localhost:8545)');
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Failed to load blockchain data:', error);
+                }
             }
         };
 
         loadBlockchainData();
     }, []);
 
-    const loadNFTs = async (web3: Web3, account: string, contractAddress: string): Promise<NFT[]> => {
-        const contract = new web3.eth.Contract(MyNftABI, contractAddress);
-        
+    const loadNFTs = async (account: string, contractAddress: string): Promise<NFT[]> => {
         try {
-            // Check if contract implements basic ERC721
-            const supportsERC721 = await contract.methods.supportsInterface('0x80ac58cd').call().catch(() => false);
-            if (!supportsERC721) {
-                throw new Error('Contract does not implement ERC721 interface');
-            }
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+            
+            const contract = new ethers.Contract(
+                contractAddress,
+                MyNftABI,
+                signer
+            );
 
-            const balance = await contract.methods.balanceOf(account).call();
-            const nfts: NFT[] = [];
+            const balance = await contract.balanceOf(account);
+            console.log('NFT balance:', balance.toString());
 
-            // Try to get transfer events to this address
-            const events = await contract.getPastEvents('Transfer', {
-                filter: { to: account },
-                fromBlock: 0,
-                toBlock: 'latest'
-            });
+            // Get the current token ID
+            const currentTokenId = await contract.getCurrentTokenId();
+            console.log('Current token ID:', currentTokenId.toString());
 
-            // Create a Set to track unique token IDs
-            const uniqueTokenIds = new Set();
+            // Create NFT object
+            const nfts: NFT[] = [{
+                name: await contract.name(),
+                tokenId: currentTokenId.toString(),
+                contractAddress: contractAddress
+            }];
 
-            // Process each transfer event
-            for (const event of events) {
-                const tokenId = event.returnValues.tokenId;
-                
-                try {
-                    // Check if we still own this token
-                    const currentOwner = await contract.methods.ownerOf(tokenId).call();
-                    if (currentOwner.toLowerCase() !== account.toLowerCase()) {
-                        continue; // Skip if we don't own it anymore
-                    }
-
-                    // Skip if we've already processed this token
-                    if (uniqueTokenIds.has(tokenId)) {
-                        continue;
-                    }
-                    uniqueTokenIds.add(tokenId);
-
-                    let name = `NFT #${tokenId}`;
-                    
-                    // Try to get metadata if tokenURI is available
-                    try {
-                        const tokenURI = await contract.methods.tokenURI(tokenId).call();
-                        if (tokenURI) {
-                            const formattedURI = tokenURI.startsWith('ipfs://')
-                                ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/')
-                                : tokenURI;
-                            
-                            const response = await fetch(formattedURI);
-                            if (response.ok) {
-                                const metadata = await response.json();
-                                name = metadata.name || name;
-                            }
-                        }
-                    } catch (metadataError) {
-                        console.warn(`Metadata fetch failed for token ${tokenId}:`, metadataError);
-                    }
-
-                    nfts.push({
-                        name,
-                        tokenId,
-                        contractAddress
-                    });
-                } catch (tokenError) {
-                    console.warn(`Failed to process token ${tokenId}:`, tokenError);
-                    continue;
-                }
-            }
-
-            console.log('NFTs loaded:', nfts);
+            console.log('Found NFTs:', nfts);
             return nfts;
         } catch (error) {
-            console.error('Error loading NFTs:', error);
+            console.error('Error in loadNFTs:', error);
             throw error;
         }
     };
@@ -120,12 +94,11 @@ const RentToOwnPage = () => {
         }
 
         try {
-            const web3 = new Web3(window.ethereum);
-            const nfts = await loadNFTs(web3, account, contractAddress);
+            const nfts = await loadNFTs(account, contractAddress);
             setNfts(nfts);
         } catch (error) {
             console.error('Error loading NFTs:', error);
-            alert('Failed to load NFTs. Please check the contract address and try again.');
+            alert('Failed to load NFTs. Check console for details.');
         }
     };
 
@@ -135,30 +108,37 @@ const RentToOwnPage = () => {
             return;
         }
 
-        const web3 = new Web3(window.ethereum);
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
         
         try {
             // 1. First verify the NFT contract
-            const nftContract = new web3.eth.Contract(MyNftABI, selectedNft.contractAddress);
+            const nftContract = new ethers.Contract(
+                selectedNft.contractAddress,
+                MyNftABI,
+                signer
+            );
             
             // 2. Check if user owns the NFT
-            const owner = await nftContract.methods.ownerOf(selectedNft.tokenId).call();
+            const owner = await nftContract.ownerOf(selectedNft.tokenId);
             if (owner.toLowerCase() !== account.toLowerCase()) {
                 alert('You do not own this NFT');
                 return;
             }
 
             // 3. Get the RentToOwn contract using the constant
-            const rentToOwnContract = new web3.eth.Contract(RentToOwnABI, RENT_TO_OWN_CONTRACT_ADDRESS);
+            const rentToOwnContract = new ethers.Contract(
+                RENT_TO_OWN_CONTRACT_ADDRESS,
+                RentToOwnABI,
+                signer
+            );
             
             // 4. Approve the NFT transfer
             console.log('Approving NFT transfer...');
-            const approveTx = await nftContract.methods.approve(
+            const approveTx = await nftContract.approve(
                 RENT_TO_OWN_CONTRACT_ADDRESS, // Use the constant here too
                 selectedNft.tokenId
-            ).send({ 
-                from: account 
-            });
+            );
             console.log('Approval transaction:', approveTx);
 
             // 5. List the NFT
@@ -169,14 +149,12 @@ const RentToOwnPage = () => {
                 numberOfPayments
             });
 
-            const listTx = await rentToOwnContract.methods.listNFT(
+            const listTx = await rentToOwnContract.listNFT(
                 selectedNft.contractAddress,
                 selectedNft.tokenId,
-                web3.utils.toWei(monthlyPayment, 'ether'),
+                ethers.utils.parseEther(monthlyPayment),
                 numberOfPayments
-            ).send({ 
-                from: account
-            });
+            );
 
             console.log('Listing transaction:', listTx);
             alert('NFT listed successfully!');
@@ -188,46 +166,100 @@ const RentToOwnPage = () => {
     };
 
     return (
-        <div>
-            <h1>Rent to Own NFTs</h1>
-            <div>
-                <h2>Load NFTs from Contract</h2>
-                <input
-                    type="text"
-                    placeholder="Enter NFT Contract Address"
-                    value={contractAddress}
-                    onChange={(e) => setContractAddress(e.target.value)}
-                />
-                <button onClick={handleLoadNFTs}>Load NFTs</button>
+        <div className="container mx-auto px-4 py-8">
+            <h1 className="text-3xl font-bold mb-8">Rent to Own NFTs</h1>
+            
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 className="text-2xl font-semibold mb-4">Load NFTs from Contract</h2>
+                <div className="flex gap-4">
+                    <input
+                        type="text"
+                        placeholder="Enter NFT Contract Address"
+                        value={contractAddress}
+                        onChange={(e) => setContractAddress(e.target.value)}
+                        className="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button 
+                        onClick={handleLoadNFTs}
+                        className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
+                    >
+                        Load NFTs
+                    </button>
+                </div>
             </div>
-            <div>
-                <h2>Your NFTs</h2>
-                <ul>
-                    {nfts.map((nft, index) => (
-                        <li key={index}>
-                            {nft.name} - {nft.tokenId}
-                            <button onClick={() => setSelectedNft(nft)}>Select</button>
-                        </li>
-                    ))}
-                </ul>
+
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 className="text-2xl font-semibold mb-4">Your NFTs</h2>
+                {nfts.length === 0 ? (
+                    <p className="text-gray-500">No NFTs found. Load your NFTs first.</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {nfts.map((nft, index) => (
+                            <div 
+                                key={index}
+                                className={`p-4 border rounded-lg ${
+                                    selectedNft?.tokenId === nft.tokenId 
+                                        ? 'border-blue-500 bg-blue-50' 
+                                        : 'border-gray-200'
+                                }`}
+                            >
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium">{nft.name}</span>
+                                    <span className="text-gray-500">ID: {nft.tokenId}</span>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedNft(nft)}
+                                    className={`w-full py-2 px-4 rounded transition-colors ${
+                                        selectedNft?.tokenId === nft.tokenId
+                                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                            : 'bg-gray-100 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {selectedNft?.tokenId === nft.tokenId ? 'Selected' : 'Select NFT'}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
+
             {selectedNft && (
-                <div>
-                    <h2>Lend NFT</h2>
-                    <p>Selected NFT: {selectedNft.name}</p>
-                    <input
-                        type="text"
-                        placeholder="Monthly Payment (ETH)"
-                        value={monthlyPayment}
-                        onChange={(e) => setMonthlyPayment(e.target.value)}
-                    />
-                    <input
-                        type="text"
-                        placeholder="Number of Payments"
-                        value={numberOfPayments}
-                        onChange={(e) => setNumberOfPayments(e.target.value)}
-                    />
-                    <button onClick={handleLendNFT}>Lend NFT</button>
+                <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-2xl font-semibold mb-4">Lend NFT</h2>
+                    <div className="mb-4">
+                        <p className="text-lg mb-2">Selected NFT: <span className="font-medium">{selectedNft.name}</span></p>
+                        <p className="text-gray-500">Token ID: {selectedNft.tokenId}</p>
+                    </div>
+                    
+                    <div className="space-y-4 mb-6">
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Monthly Payment (ETH)</label>
+                            <input
+                                type="text"
+                                placeholder="e.g., 0.1"
+                                value={monthlyPayment}
+                                onChange={(e) => setMonthlyPayment(e.target.value)}
+                                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Number of Payments</label>
+                            <input
+                                type="text"
+                                placeholder="e.g., 12"
+                                value={numberOfPayments}
+                                onChange={(e) => setNumberOfPayments(e.target.value)}
+                                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleLendNFT}
+                        className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors font-medium"
+                    >
+                        List NFT for Rent-to-Own
+                    </button>
                 </div>
             )}
         </div>
