@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { shadcnPreset } = require("./shadcn-preset");
-
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -14,7 +11,6 @@ module.exports = {
   darkMode: ["selector", "[data-theme='forest']"],
   // DaisyUI theme colors
   daisyui: {
-    prefix: "daisy-",
     themes: [
       {
         pastel: {
@@ -107,5 +103,4 @@ module.exports = {
       },
     },
   },
-  presets: [shadcnPreset],
 };
