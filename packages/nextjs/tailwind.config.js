@@ -3,13 +3,13 @@ module.exports = {
   content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}", "./utils/**/*.{js,ts,jsx,tsx}"],
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   plugins: [require("daisyui")],
-  darkTheme: "dark",
-  darkMode: ["selector", "[data-theme='dark']"],
+  darkTheme: "forest",
+  darkMode: ["selector", "[data-theme='forest']"],
   // DaisyUI theme colors
   daisyui: {
     themes: [
       {
-        light: {
+        pastel: {
           primary: "#93BBFB",
           "primary-content": "#212638",
           secondary: "#DAE8FF",
@@ -41,7 +41,7 @@ module.exports = {
         },
       },
       {
-        dark: {
+        forest: {
           primary: "#212638",
           "primary-content": "#F9FBFF",
           secondary: "#323f61",
