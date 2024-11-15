@@ -13,7 +13,7 @@ describe("RentToOwn", function () {
   let tokenId: any; //BigNumberish //import { BigNumberish } from "ethers";
   let monthlyPayment: any; //BigNumberish
 
-  before(async () => {
+  beforeEach(async () => {
     // Get signers
     [lender, borrower] = await ethers.getSigners();
     console.log("Lender:", lender.address);
@@ -42,9 +42,6 @@ describe("RentToOwn", function () {
     const receipt = await mintTx.wait();
     tokenId = await myNFT.getCurrentTokenId();
     console.log("Token ID:", tokenId.toString());
-    const owner = await myNFT.ownerOf(tokenId);
-    console.log("Token Owner:", owner);
-    console.log(owner === lender.address ? "Lender is the owner" : "Lender is not the owner");
   });
 
   describe("Listing NFT", function () {
