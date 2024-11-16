@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { SkipTimeComponent } from "~~/components/dev/SkipTimeComponent";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
@@ -12,35 +12,47 @@ export default function BorrowPage() {
 
   const { writeContractAsync: writeRentToOwnAsync } = useScaffoldWriteContract("RentToOwn");
 
-  const startAgreement = useCallback(async (id: number, monthlyPayment: bigint) => {
-    try {
-      await writeRentToOwnAsync({
-        functionName: "startAgreement",
-        args: [id as unknown as bigint],
-        value: monthlyPayment,
-      });
-      alert("Agreement started successfully!");
-      reloadAgreements();
-    } catch (e) {
-      console.log({ e });
-      alert("Failed to start agreement. Please try again.");
-    }
+  // Fetch agreements on mount or when agreementCounter changes
+  useEffect(() => {
+    void reloadAgreements();
+    // eslint-disable-next-line
   }, []);
 
-  const makePayment = useCallback(async (id: number, monthlyPayment: bigint) => {
-    try {
-      await writeRentToOwnAsync({
-        functionName: "makePayment",
-        args: [id as unknown as bigint],
-        value: monthlyPayment,
-      });
-      alert("Payment made successfully!");
-      reloadAgreements();
-    } catch (e) {
-      console.log({ e });
-      alert("Failed to make payment. Please try again.");
-    }
-  }, []);
+  const startAgreement = useCallback(
+    async (id: number, monthlyPayment: bigint) => {
+      try {
+        await writeRentToOwnAsync({
+          functionName: "startAgreement",
+          args: [id as unknown as bigint],
+          value: monthlyPayment,
+        });
+        alert("Agreement started successfully!");
+        reloadAgreements();
+      } catch (e) {
+        console.log({ e });
+        alert("Failed to start agreement. Please try again.");
+      }
+    },
+    [agreements, reloadAgreements],
+  );
+
+  const makePayment = useCallback(
+    async (id: number, monthlyPayment: bigint) => {
+      try {
+        await writeRentToOwnAsync({
+          functionName: "makePayment",
+          args: [id as unknown as bigint],
+          value: monthlyPayment,
+        });
+        alert("Payment made successfully!");
+        reloadAgreements();
+      } catch (e) {
+        console.log({ e });
+        alert("Failed to make payment. Please try again.");
+      }
+    },
+    [agreements, reloadAgreements],
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">

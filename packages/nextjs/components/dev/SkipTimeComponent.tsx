@@ -48,7 +48,7 @@ export const SkipTimeComponent = ({ reload }: SkipTimeProps) => {
           type="number"
           value={days}
           onChange={e => setDays(Number(e.target.value))}
-          className="border p-2 rounded"
+          className="border p-2 rounded text-secondary"
           placeholder="Days to skip"
         />
         <button

@@ -42,7 +42,7 @@ export function useAgreements() {
 
     const fetchAgreements = async () => {
       if (rentToOwnContractLoading || !rentToOwnContract) {
-        alert("The RentToOwn Contract is loading.");
+        setError(new Error("The RentToOwn Contract is loading."));
         return [];
       }
       setLoading(true);
@@ -82,11 +82,6 @@ export function useAgreements() {
 
     void fetchAgreements();
   }, [agreementCounter, counterLoading, counterError, rentToOwnContract]);
-
-  // Fetch agreements on mount or when agreementCounter changes
-  useEffect(() => {
-    void fetchAgreements();
-  }, [fetchAgreements]);
 
   return { agreements, loading, error, reload: fetchAgreements };
 }

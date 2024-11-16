@@ -1,79 +1,55 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { parseEther } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
 import { useScaffoldContract, useTransactor } from "~~/hooks/scaffold-eth";
+import { useFetchNFTs } from "~~/hooks/useFetchNFTs";
+import useNFTStore from "~~/services/store/useNFTStore";
+import { notification } from "~~/utils/scaffold-eth";
 import { useAllContracts } from "~~/utils/scaffold-eth/contractsData";
-
-// Define the NFT type
-interface NFT {
-  name: string;
-  tokenId: bigint;
-  contractAddress: string; // Add this property based on your NFT structure
-}
 
 const RentToOwnPage = () => {
   const { address: connectedAddress } = useAccount();
   const { RentToOwn, MyNFT } = useAllContracts();
 
-  const [nfts, setNfts] = useState<NFT[]>([]); // Specify the type for nfts
-  const [selectedNft, setSelectedNft] = useState<NFT | null>(null); // Specify the type for selectedNft
   const [monthlyPayment, setMonthlyPayment] = useState<string>("");
   const [numberOfPayments, setNumberOfPayments] = useState<string>("");
-  const [contractAddress, setContractAddress] = useState<string>(""); // State for contract address input
 
+  const { nfts, selectedNft, isLoading, setNFTs, setLoading, setSelectedNft } = useNFTStore();
+  const { fetchNFTs } = useFetchNFTs();
   const { data: myNFTContract, isLoading: myNFTIsLoading } = useScaffoldContract({
     contractName: "MyNFT",
   });
   const { writeContractAsync } = useWriteContract();
   const writeTx = useTransactor();
 
-  const loadNFTs = async (contractAddress: string): Promise<NFT[]> => {
-    if (myNFTIsLoading || !myNFTContract) {
-      alert("The NFT Contract is loading.");
-      return [];
-    }
-    // Get the current token ID
-    const currentTokenId = await myNFTContract.read.getCurrentTokenId();
-    console.log("Current token ID:", currentTokenId.toString());
+  useEffect(() => {
+    if (myNFTIsLoading || !myNFTContract) return;
 
-    // Create NFT object
-    const nfts: NFT[] = [
-      {
-        name: await myNFTContract.read.name(),
-        tokenId: currentTokenId,
-        contractAddress: contractAddress,
-      },
-    ];
+    const loadNFTs = async () => {
+      setLoading(true);
+      try {
+        const fetchedNFTs = await fetchNFTs(myNFTContract.address);
+        setNFTs(fetchedNFTs);
+      } catch (err) {
+        notification.error(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    console.log("Found NFTs:", nfts);
-    return nfts;
-  };
-
-  const handleLoadNFTs = useCallback(async () => {
-    if (!contractAddress) {
-      alert("Please enter a valid contract address.");
-      return;
-    }
-
-    try {
-      const nfts = await loadNFTs(contractAddress);
-      setNfts(nfts);
-    } catch (error) {
-      console.error("Error loading NFTs:", error);
-      alert("Failed to load NFTs. Check console for details.");
-    }
+    void loadNFTs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contractAddress, setContractAddress]);
+  }, [myNFTIsLoading]);
 
   const handleLendNFT = useCallback(async () => {
     if (myNFTIsLoading || !myNFTContract) {
-      alert("The NFT Contract is loading.");
+      notification.error("The NFT Contract is loading.");
       return [];
     }
     if (!selectedNft || !monthlyPayment || !numberOfPayments) {
-      alert("Please fill in all fields");
+      notification.error("Please fill in all fields");
       return;
     }
 
@@ -82,7 +58,7 @@ const RentToOwnPage = () => {
       // 2. Check if user owns the NFT
       const owner = await myNFTContract.read.ownerOf(selectedNft.tokenId as any);
       if (owner.toLowerCase() !== connectedAddress) {
-        alert("You do not own this NFT");
+        notification.error("You do not own this NFT");
         return;
       }
 
@@ -118,10 +94,10 @@ const RentToOwnPage = () => {
       const listTx = await writeTx(writeListNFT, { blockConfirmations: 1 });
 
       console.log("Listing transaction:", listTx);
-      alert("NFT listed successfully!");
+      notification.success("NFT listed successfully!");
     } catch (error: any) {
       console.error("Error:", error);
-      alert(`Error: ${error.message}`);
+      notification.error(`Error: ${error.message}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNft, setSelectedNft, monthlyPayment, setMonthlyPayment, numberOfPayments, setNumberOfPayments]);
@@ -131,51 +107,40 @@ const RentToOwnPage = () => {
       <h1 className="text-3xl font-bold mb-8">Rent to Own NFTs</h1>
 
       <div className="bg-secondary rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Load NFTs from Contract</h2>
-        <div className="flex gap-4">
-          <input
-            type="text"
-            placeholder="Enter NFT Contract Address"
-            value={contractAddress}
-            onChange={e => setContractAddress(e.target.value)}
-            className="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={handleLoadNFTs}
-            className="bg-info text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
-          >
-            Load NFTs
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-secondary rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-2xl font-semibold mb-4">Your NFTs</h2>
-        {nfts.length === 0 ? (
+        {isLoading ? (
           <p className="text-gray-500">No NFTs found. Load your NFTs first.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {nfts.map((nft, index) => (
               <div
-                key={index}
-                className={`p-4 border rounded-lg ${
-                  selectedNft?.tokenId === nft.tokenId ? "border-blue-500 bg-blue-50" : "border-gray-200"
+                className={`card bg-base-100 w-96 shadow-xl ${
+                  selectedNft?.tokenId === nft.tokenId ? "border-blue-500" : "border-gray-200"
                 }`}
+                key={index}
               >
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">{nft.name}</span>
-                  <span className="text-gray-500">ID: {nft.tokenId}</span>
+                <figure>
+                  <img
+                    src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
+                    alt={nft.name}
+                  />
+                </figure>
+                <div className="card-body">
+                  <h2 className="card-title">
+                    {nft.name}
+                    <div className="badge badge-secondary p-5">ID: {nft.tokenId}</div>
+                  </h2>
+                  <button
+                    onClick={() => setSelectedNft(nft)}
+                    className={`w-full py-2 px-4 btn-info glass rounded transition-colors ${
+                      selectedNft?.tokenId === nft.tokenId
+                        ? "bg-primary hover:bg-blue-600 text-warning"
+                        : "bg-warning hover:bg-gray-200 text-secondary"
+                    }`}
+                  >
+                    {selectedNft?.tokenId === nft.tokenId ? "Selected" : "Select NFT"}
+                  </button>
                 </div>
-                <button
-                  onClick={() => setSelectedNft(nft)}
-                  className={`w-full py-2 px-4 rounded transition-colors ${
-                    selectedNft?.tokenId === nft.tokenId
-                      ? "bg-blue-500 text-white hover:bg-blue-600"
-                      : "bg-gray-100 hover:bg-gray-200"
-                  }`}
-                >
-                  {selectedNft?.tokenId === nft.tokenId ? "Selected" : "Select NFT"}
-                </button>
               </div>
             ))}
           </div>
@@ -183,7 +148,7 @@ const RentToOwnPage = () => {
       </div>
 
       {selectedNft && (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-secondary rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-4">Lend NFT</h2>
           <div className="mb-4">
             <p className="text-lg mb-2">
@@ -200,7 +165,7 @@ const RentToOwnPage = () => {
                 placeholder="e.g., 0.1"
                 value={monthlyPayment}
                 onChange={e => setMonthlyPayment(e.target.value)}
-                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-secondary p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -210,7 +175,7 @@ const RentToOwnPage = () => {
                 placeholder="e.g., 12"
                 value={numberOfPayments}
                 onChange={e => setNumberOfPayments(e.target.value)}
-                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-secondary p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
