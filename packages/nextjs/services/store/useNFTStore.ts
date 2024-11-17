@@ -7,6 +7,7 @@ import { devtools, persist } from "zustand/middleware";
 interface NFT {
   name: string;
   tokenId: string;
+  tokenURI: string;
   contractAddress: string;
 }
 

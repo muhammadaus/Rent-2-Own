@@ -54,6 +54,26 @@ const deployRentToOwn: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const tokenId: BigNumberish = await myNFT.getCurrentTokenId();
   console.log("NFT minted to lender with tokenId:", tokenId.toString());
 
+  // Mint 6 more NFTs to lender with a token URI
+  //  more monthly payments by borrower
+  const images = [
+    "QmVoxRgoBP1PM67moe2yisTGRfRhYLjTwWgr74xJo9voMR",
+    "QmZjijezPmjBhrgAmUyTEQ1ymHN8aUpmx9yWdg5aXA4NSh",
+    "Qma4F9o8oH5mri4mCcZhQ4URSvTAh5aGnuED4G7RcatNQJ",
+    "QmUo6yoKri4sL151fnwNbjoXM9xSgePSs3doTYknMEuaHy",
+    "Qmba2Lqi6xGZ5EY3QPxoZz5KGMUbqhNC55rEakAPwP2Bus",
+    "QmV9gunTMKEAgeyG62qXw3T5i2dPsgykS9WctfDFGz7nKJ",
+  ];
+  for (let i = 1; i <= 6; i++) {
+    const tokenURI = `https://black-objective-gerbil-643.mypinata.cloud/ipfs/${images[i - 1]}`;
+    const mintTx = await myNFT
+      .connect(lender)
+      .safeMint("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as any, tokenURI as any);
+    await mintTx.wait();
+    const tokenId: BigNumberish = await myNFT.getCurrentTokenId();
+    console.log("NFT minted to lender with tokenId:", tokenId.toString());
+  }
+
   // Setup monthly payment
   const monthlyPayment: BigNumberish = parseEther("0.1");
   const numberOfPayments: number = 12;

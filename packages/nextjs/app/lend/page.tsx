@@ -2,8 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { parseEther } from "viem";
-import { useAccount, useWriteContract } from "wagmi";
-import { useScaffoldContract, useTransactor } from "~~/hooks/scaffold-eth";
+import { useAccount, useWalletClient, useWriteContract } from "wagmi";
+import { useScaffoldContract, useScaffoldReadContract, useTransactor } from "~~/hooks/scaffold-eth";
 import { useFetchNFTs } from "~~/hooks/useFetchNFTs";
 import useNFTStore from "~~/services/store/useNFTStore";
 import { notification } from "~~/utils/scaffold-eth";
@@ -18,22 +18,25 @@ const RentToOwnPage = () => {
 
   const { nfts, selectedNft, isLoading, setNFTs, setLoading, setSelectedNft } = useNFTStore();
   const { fetchNFTs } = useFetchNFTs();
+
+  const { data: walletClient } = useWalletClient({ account: connectedAddress });
   const { data: myNFTContract, isLoading: myNFTIsLoading } = useScaffoldContract({
     contractName: "MyNFT",
+    walletClient,
   });
   const { writeContractAsync } = useWriteContract();
   const writeTx = useTransactor();
 
   useEffect(() => {
-    if (myNFTIsLoading || !myNFTContract) return;
+    if (myNFTIsLoading || !myNFTContract || !connectedAddress) return;
 
     const loadNFTs = async () => {
       setLoading(true);
       try {
-        const fetchedNFTs = await fetchNFTs(myNFTContract.address);
+        const fetchedNFTs = await fetchNFTs();
         setNFTs(fetchedNFTs);
-      } catch (err) {
-        notification.error(err.message);
+      } catch (err: unknown) {
+        notification.error((err as Error)?.message);
       } finally {
         setLoading(false);
       }
@@ -41,7 +44,7 @@ const RentToOwnPage = () => {
 
     void loadNFTs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myNFTIsLoading]);
+  }, [myNFTIsLoading, connectedAddress]);
 
   const handleLendNFT = useCallback(async () => {
     if (myNFTIsLoading || !myNFTContract) {
@@ -52,12 +55,13 @@ const RentToOwnPage = () => {
       notification.error("Please fill in all fields");
       return;
     }
+    const currentTokenId = BigInt(selectedNft.tokenId);
 
     try {
       // 1. First verify the NFT contract
       // 2. Check if user owns the NFT
-      const owner = await myNFTContract.read.ownerOf(selectedNft.tokenId as any);
-      if (owner.toLowerCase() !== connectedAddress) {
+      const owner = await myNFTContract.read.ownerOf([currentTokenId]);
+      if (owner !== connectedAddress) {
         notification.error("You do not own this NFT");
         return;
       }
@@ -65,22 +69,21 @@ const RentToOwnPage = () => {
       // 3. Get the RentToOwn contract using the constant
       // 4. Approve the NFT transfer
       console.log("Approving NFT transfer...");
-      const writeApproveNFTTransfer = () =>
-        writeContractAsync({
-          address: MyNFT.address,
-          abi: MyNFT.abi,
-          functionName: "approve",
-          args: [RentToOwn.address, selectedNft.tokenId],
-        });
-      const approveTx = await writeTx(writeApproveNFTTransfer, { blockConfirmations: 1 });
+      const approveTx = await writeContractAsync({
+        address: MyNFT.address,
+        abi: MyNFT.abi,
+        functionName: "approve",
+        args: [RentToOwn.address, currentTokenId],
+      });
       console.log("Approval transaction:", approveTx);
 
       // 5. List the NFT
       console.log("Listing NFT with parameters:", {
         nftContract: selectedNft.contractAddress,
-        tokenId: selectedNft.tokenId,
+        tokenId: currentTokenId,
         monthlyPayment,
         numberOfPayments,
+        typeof: typeof numberOfPayments,
       });
 
       const writeListNFT = () =>
@@ -88,7 +91,7 @@ const RentToOwnPage = () => {
           address: RentToOwn.address,
           abi: RentToOwn.abi,
           functionName: "listNFT",
-          args: [selectedNft.contractAddress, selectedNft.tokenId, parseEther(monthlyPayment), numberOfPayments],
+          args: [selectedNft.contractAddress, currentTokenId, parseEther(monthlyPayment), numberOfPayments],
         });
 
       const listTx = await writeTx(writeListNFT, { blockConfirmations: 1 });
@@ -100,7 +103,7 @@ const RentToOwnPage = () => {
       notification.error(`Error: ${error.message}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNft, setSelectedNft, monthlyPayment, setMonthlyPayment, numberOfPayments, setNumberOfPayments]);
+  }, [selectedNft, monthlyPayment, numberOfPayments]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -120,10 +123,7 @@ const RentToOwnPage = () => {
                 key={index}
               >
                 <figure>
-                  <img
-                    src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
-                    alt={nft.name}
-                  />
+                  <img src={nft.tokenURI} alt={nft.name} />
                 </figure>
                 <div className="card-body">
                   <h2 className="card-title">
@@ -162,7 +162,7 @@ const RentToOwnPage = () => {
               <label className="block text-sm font-medium mb-2">Monthly Payment (ETH)</label>
               <input
                 type="text"
-                placeholder="e.g., 0.1"
+                placeholder="0.1"
                 value={monthlyPayment}
                 onChange={e => setMonthlyPayment(e.target.value)}
                 className="w-full text-secondary p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -172,7 +172,7 @@ const RentToOwnPage = () => {
               <label className="block text-sm font-medium mb-2">Number of Payments</label>
               <input
                 type="text"
-                placeholder="e.g., 12"
+                placeholder="12"
                 value={numberOfPayments}
                 onChange={e => setNumberOfPayments(e.target.value)}
                 className="w-full text-secondary p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
