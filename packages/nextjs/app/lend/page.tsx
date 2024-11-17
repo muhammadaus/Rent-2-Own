@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { parseEther } from "viem";
 import { useAccount, useWalletClient, useWriteContract } from "wagmi";
+import { LoadNFTsComponent } from "~~/components/lend/LoadNFTs";
 import { useScaffoldContract, useTransactor } from "~~/hooks/scaffold-eth";
 import { useFetchNFTs } from "~~/hooks/useFetchNFTs";
 import useNFTStore from "~~/services/store/useNFTStore";
@@ -70,12 +71,14 @@ const RentToOwnPage = () => {
       // 3. Get the RentToOwn contract using the constant
       // 4. Approve the NFT transfer
       console.log("Approving NFT transfer...");
-      const approveTx = await writeContractAsync({
-        address: MyNFT.address,
-        abi: MyNFT.abi,
-        functionName: "approve",
-        args: [RentToOwn.address, currentTokenId],
-      });
+      const approveNFT = () =>
+        writeContractAsync({
+          address: MyNFT.address,
+          abi: MyNFT.abi,
+          functionName: "approve",
+          args: [RentToOwn.address, currentTokenId],
+        });
+      const approveTx = await writeTx(approveNFT, { blockConfirmations: 1 });
       console.log("Approval transaction:", approveTx);
 
       // 5. List the NFT
@@ -109,6 +112,8 @@ const RentToOwnPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Rent to Own NFTs</h1>
+
+      <LoadNFTsComponent />
 
       <div className="bg-secondary rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-2xl font-semibold mb-4">Your NFTs</h2>

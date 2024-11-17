@@ -1,15 +1,6 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-
-/**
- * NFT type definition
- */
-interface NFT {
-  name: string;
-  tokenId: string;
-  tokenURI: string;
-  contractAddress: string;
-}
+import { NFT } from "~~/types/NFT";
 
 /**
  * Store shape definition

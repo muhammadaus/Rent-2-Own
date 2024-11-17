@@ -1,13 +1,7 @@
 import { useAccount } from "wagmi";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
+import { NFT } from "~~/types/NFT";
 import { notification } from "~~/utils/scaffold-eth";
-
-interface NFT {
-  name: string;
-  tokenId: string;
-  tokenURI: string;
-  contractAddress: string;
-}
 
 export function useFetchNFTs() {
   const { address: connectedAddress } = useAccount();
@@ -15,14 +9,16 @@ export function useFetchNFTs() {
     contractName: "MyNFT",
   });
 
-  const fetchNFTs = async (): Promise<NFT[]> => {
+  const fetchNFTs = async (currentNftAddress?: string): Promise<NFT[]> => {
     if (!myNFTContract || !connectedAddress) {
       notification.error("Contract not available.");
       return [];
     }
+    const nfts = [];
+    const contractAddress = currentNftAddress || myNFTContract.address;
 
     try {
-      const nfts = [];
+      //TODO use contractAddress to get tokenId, ownerOf, tokenURI and contract name
 
       // Fetch current token ID
       const currentTokenId = await myNFTContract.read.getCurrentTokenId();
@@ -37,7 +33,7 @@ export function useFetchNFTs() {
             name: await myNFTContract.read.name(),
             tokenId: `${i}`,
             tokenURI: tokenURI.toString(),
-            contractAddress: myNFTContract.address,
+            contractAddress,
           });
         }
       }
