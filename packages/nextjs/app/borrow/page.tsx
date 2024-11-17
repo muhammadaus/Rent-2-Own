@@ -1,123 +1,158 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useWriteContract } from "wagmi";
 import { SkipTimeComponent } from "~~/components/dev/SkipTimeComponent";
-import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { useAgreements } from "~~/hooks/useAgreements";
+import { Address } from "~~/components/scaffold-eth";
+import { useScaffoldContract, useTransactor } from "~~/hooks/scaffold-eth";
+import { useFetchAgreements } from "~~/hooks/useFetchAgreements";
+import useAgreementStore from "~~/services/store/useAgreementStore";
 import { notification } from "~~/utils/scaffold-eth";
+import { useAllContracts } from "~~/utils/scaffold-eth/contractsData";
 
 export default function BorrowPage() {
-  const { address: connectedAddress } = useAccount();
-  const { agreements, loading, reload: reloadAgreements } = useAgreements();
+  const { RentToOwn } = useAllContracts();
+  const { agreements, isLoading, error } = useAgreementStore();
+  const { fetchAgreements } = useFetchAgreements();
+  const { data: rentToOwnContract, isLoading: contractLoading } = useScaffoldContract({
+    contractName: "RentToOwn",
+  });
 
-  const { writeContractAsync: writeRentToOwnAsync } = useScaffoldWriteContract("RentToOwn");
+  const { address: connectedAddress } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const writeTx = useTransactor();
 
   // Fetch agreements on mount or when agreementCounter changes
   useEffect(() => {
-    void reloadAgreements();
-    // eslint-disable-next-line
-  }, []);
+    if (contractLoading || !rentToOwnContract) return;
+
+    void fetchAgreements();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractLoading]);
 
   const startAgreement = useCallback(
-    async (id: number, monthlyPayment: bigint) => {
+    async (id: number, monthlyPayment: string) => {
       try {
-        await writeRentToOwnAsync({
-          functionName: "startAgreement",
-          args: [id as unknown as bigint],
-          value: monthlyPayment,
-        });
+        const startAgreement = () =>
+          writeContractAsync({
+            address: RentToOwn.address,
+            abi: RentToOwn.abi,
+            functionName: "startAgreement",
+            args: [id as unknown as bigint],
+            //TODO
+            // value: monthlyPayment,
+          });
+        const approveTx = await writeTx(startAgreement, { blockConfirmations: 1 });
+        console.log("Agreement started:", approveTx);
         notification.success("Agreement started successfully!");
-        reloadAgreements();
+        void fetchAgreements();
       } catch (e) {
         console.log({ e });
         notification.error("Failed to start agreement. Please try again.");
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [agreements, reloadAgreements],
+    [agreements],
   );
 
   const makePayment = useCallback(
-    async (id: number, monthlyPayment: bigint) => {
+    async (id: number, monthlyPayment: string) => {
       try {
-        await writeRentToOwnAsync({
-          functionName: "makePayment",
-          args: [id as unknown as bigint],
-          value: monthlyPayment,
-        });
+        const makePayment = () =>
+          writeContractAsync({
+            address: RentToOwn.address,
+            abi: RentToOwn.abi,
+            functionName: "makePayment",
+            args: [id as unknown as bigint],
+            //TODO
+            // value: monthlyPayment,
+          });
+        const approveTx = await writeTx(makePayment, { blockConfirmations: 1 });
+        console.log("Agreement started:", approveTx);
         notification.success("Payment made successfully!");
-        reloadAgreements();
+        void fetchAgreements();
       } catch (e) {
         console.log({ e });
         notification.error("Failed to make payment. Please try again.");
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [agreements, reloadAgreements],
+    [agreements],
   );
 
+  // noinspection TypeScriptValidateTypes
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">NFT Rent-to-Own Agreements</h1>
 
-      <SkipTimeComponent reload={reloadAgreements} />
+      <SkipTimeComponent />
 
-      <h2 className="text-2xl font-bold mb-6">Available Agreements</h2>
-      {loading ? (
-        <p>Loading agreements...</p>
-      ) : (
+      <h2 className="text-2xl font-bold mb-6 mt-6">Available Agreements</h2>
+      {isLoading && <p>Loading agreements...</p>}
+      {error && <p className="text-red-500">Error: {error}</p>}
+
+      {!isLoading && !error && agreements.length === 0 && <p>No agreements available.</p>}
+
+      {!isLoading && !error && agreements.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {agreements
             .filter(a => a.isActive && a.borrower === "0x0000000000000000000000000000000000000000")
             .map(agreement => (
-              <div key={agreement.id} className="border rounded-lg p-6 shadow-lg">
-                <h2 className="text-xl font-semibold mb-4">Agreement #{agreement.id}</h2>
-                <div className="space-y-2">
+              <div key={agreement.id} className="card bg-primary text-primary-content w-96">
+                <div className="card-body">
+                  <h2 className="card-title">Agreement #{agreement.id}</h2>
                   <p>
-                    <span className="font-medium">NFT Contract:</span> {agreement.nftContract}
+                    <span className="font-medium">NFT Contract:</span>
+                    {agreement?.nftContract && <Address address={agreement.nftContract} />}
                   </p>
                   <p>
                     <span className="font-medium">NFT ID:</span> {agreement.nftId}
                   </p>
                   <p>
-                    <span className="font-medium">Monthly Payment:</span> {agreement.monthlyPayment} ETH
+                    <span className="font-medium">Monthly Payment:</span> {agreement.monthlyPayment.toString()} ETH
                   </p>
                   <p>
-                    <span className="font-medium">Total Price:</span> {agreement.totalPrice} ETH
+                    <span className="font-medium">Total Price:</span> {agreement.totalPrice.toString()} ETH
                   </p>
+                  <div className="card-actions justify-end">
+                    <button
+                      onClick={() => startAgreement(agreement.id, agreement.monthlyPayment)}
+                      className="btn mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                    >
+                      Start Agreement
+                    </button>
+                  </div>
                 </div>
-
-                <button
-                  onClick={() => startAgreement(agreement.id, agreement.monthlyPayment)}
-                  className="mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                >
-                  Start Agreement
-                </button>
               </div>
             ))}
         </div>
       )}
 
       <h2 className="text-2xl font-bold mb-6 mt-12">My Active Agreements</h2>
-      {loading ? (
-        <p>Loading agreements...</p>
-      ) : (
+      {isLoading && <p>Loading agreements...</p>}
+      {error && <p className="text-red-500">Error: {error}</p>}
+
+      {!isLoading && !error && agreements.filter(a => a.isActive && a.borrower === connectedAddress).length === 0 && (
+        <p>No agreements made.</p>
+      )}
+
+      {!isLoading && !error && agreements.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {agreements
-            .filter(a => a.isActive && a.borrower.toLowerCase() === (connectedAddress as string))
+            .filter(a => a.isActive && a.borrower === connectedAddress)
             .map(agreement => (
-              <div key={agreement.id} className="border rounded-lg p-6 shadow-lg">
-                <h2 className="text-xl font-semibold mb-4">Agreement #{agreement.id}</h2>
-                <div className="space-y-2">
+              <div key={agreement.id} className="card bg-primary text-primary-content w-96">
+                <div className="card-body">
+                  <h2 className="card-title">Agreement #{agreement.id}</h2>
                   <p>
-                    <span className="font-medium">NFT Contract:</span> {agreement.nftContract}
+                    <span className="font-medium">NFT Contract:</span>
+                    {agreement?.nftContract && <Address address={agreement.nftContract} />}
                   </p>
                   <p>
                     <span className="font-medium">NFT ID:</span> {agreement.nftId}
                   </p>
                   <p>
-                    <span className="font-medium">Monthly Payment:</span> {agreement.monthlyPayment} ETH
+                    <span className="font-medium">Monthly Payment:</span> {agreement.monthlyPayment.toString()} ETH
                   </p>
                   <p>
                     <span className="font-medium">Total Price:</span> {agreement.totalPrice} ETH
@@ -129,16 +164,17 @@ export default function BorrowPage() {
                     <span className="font-medium">Next Payment Due:</span> {agreement.nextPaymentDue}
                   </p>
                   <p>
-                    <span className="font-medium">Remaining:</span> {agreement.totalRemaining} ETH
+                    <span className="font-medium">Remaining:</span> {agreement.totalRemaining.toString()} ETH
                   </p>
+                  <div className="card-actions justify-end">
+                    <button
+                      onClick={() => makePayment(agreement.id, agreement.monthlyPayment)}
+                      className="btn mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                    >
+                      Make Payment
+                    </button>
+                  </div>
                 </div>
-
-                <button
-                  onClick={() => makePayment(agreement.id, agreement.monthlyPayment)}
-                  className="mt-4 w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
-                >
-                  Make Payment
-                </button>
               </div>
             ))}
         </div>

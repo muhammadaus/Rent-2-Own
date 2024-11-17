@@ -1,20 +1,19 @@
 import { useState } from "react";
 import { usePublicClient } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { useFetchAgreements } from "~~/hooks/useFetchAgreements";
+import { notification } from "~~/utils/scaffold-eth";
 
-interface SkipTimeProps {
-  reload: () => void; // Callback to reload agreements
-}
-
-export const SkipTimeComponent = ({ reload }: SkipTimeProps) => {
+export const SkipTimeComponent = () => {
   const { targetNetwork } = useTargetNetwork();
   const publicClient = usePublicClient({ chainId: targetNetwork.id });
+  const { fetchAgreements } = useFetchAgreements();
   const [isLoading, setIsLoading] = useState(false);
   const [days, setDays] = useState<number>(30);
 
   const skipTime = async (days: number) => {
     if (!publicClient) {
-      alert("Public client not available. Ensure you're connected to the correct network.");
+      notification.error("Public client not available. Ensure you're connected to the correct network.");
       return;
     }
 
@@ -30,11 +29,11 @@ export const SkipTimeComponent = ({ reload }: SkipTimeProps) => {
       //   params: [],
       // });
 
-      alert(`Skipped ${days} days!`);
-      reload(); // Refresh agreements after time skip
+      notification.success(`Skipped ${days} days!`);
+      void fetchAgreements(); // Refresh agreements after time skip
     } catch (error) {
       console.error("Error skipping time:", error);
-      alert("Failed to skip time. Ensure you're connected to the correct network.");
+      notification.error("Failed to skip time. Ensure you're connected to the correct network.");
     } finally {
       setIsLoading(false);
     }
