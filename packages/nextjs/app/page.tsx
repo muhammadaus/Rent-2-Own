@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
-import { BanknotesIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { BanknotesIcon, WalletIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
 
 const Home: NextPage = () => {
@@ -35,7 +35,7 @@ const Home: NextPage = () => {
             </Link>
             <Link href="/borrow">
               <div className="flex flex-col bg-base-100 px-5 py-5 text-center items-center max-w-xs rounded-3xl">
-                <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" /> Borrow
+                <WalletIcon className="h-8 w-8 fill-secondary" /> Borrow
                 <p>Seek through available agreements</p>
               </div>
             </Link>
