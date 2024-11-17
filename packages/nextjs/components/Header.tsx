@@ -100,8 +100,14 @@ export const Header = () => {
           )}
         </div>
         <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
-          <div className="flex relative w-10 h-10">
-            <Image alt="Rent2Own" className="cursor-pointer" fill src="/logo.png" />
+          <div className="flex relative rounded w-10 h-10">
+            <Image
+              alt="Rent2Own"
+              className="cursor-pointer"
+              fill
+              sizes="(max-width: 768px) 10vw, (max-width: 1200px) 10vw, 10vw"
+              src="/logo.png"
+            />
           </div>
           <div className="flex flex-col">
             <span className="font-bold leading-tight">Rent2Own</span>
