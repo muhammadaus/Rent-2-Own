@@ -13,12 +13,12 @@ import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { useInitializeNativeCurrencyPrice } from "~~/hooks/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
-const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
+const ScaffoldEthApp = ({ backgroundClass, children }: { backgroundClass: string; children: React.ReactNode }) => {
   useInitializeNativeCurrencyPrice();
 
   return (
     <>
-      <div className="flex flex-col min-h-screen">
+      <div className={`${backgroundClass} flex flex-col min-h-screen`}>
         <Header />
         <main className="relative flex flex-col flex-1">{children}</main>
         <Footer />
@@ -38,8 +38,9 @@ export const queryClient = new QueryClient({
 
 export const ScaffoldEthAppWithProviders = ({ children }: { children: React.ReactNode }) => {
   const { resolvedTheme } = useTheme();
-  const isDarkMode = resolvedTheme === "dark";
+  const isDarkMode = resolvedTheme !== "pastel";
   const [mounted, setMounted] = useState(false);
+  const backgroundClass = isDarkMode ? "bg-forest-texture bg-texture" : "bg-pastel-texture bg-texture";
 
   useEffect(() => {
     setMounted(true);
@@ -51,9 +52,9 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
         <ProgressBar height="3px" color="#2299dd" />
         <RainbowKitProvider
           avatar={BlockieAvatar}
-          theme={mounted ? (isDarkMode ? darkTheme() : lightTheme()) : lightTheme()}
+          theme={mounted ? (isDarkMode ? darkTheme() : lightTheme()) : darkTheme()}
         >
-          <ScaffoldEthApp>{children}</ScaffoldEthApp>
+          <ScaffoldEthApp backgroundClass={backgroundClass}>{children}</ScaffoldEthApp>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

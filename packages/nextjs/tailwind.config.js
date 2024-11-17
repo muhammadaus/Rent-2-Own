@@ -1,12 +1,22 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const plugin = require("tailwindcss/plugin");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./app/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}",
-    "./utils/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}", "./utils/**/*.{js,ts,jsx,tsx}"],
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  plugins: [require("daisyui")],
+  plugins: [
+    plugin(function ({ addUtilities }) {
+      addUtilities({
+        ".bg-texture": {
+          backgroundSize: "auto", // Default size
+          backgroundRepeat: "repeat", // Ensure texture repeats
+          backgroundPosition: "top left", // Optional for alignment
+        },
+      });
+    }),
+    require("daisyui"),
+  ],
   darkTheme: "forest",
   darkMode: ["selector", "[data-theme='forest']"],
   // DaisyUI theme colors
@@ -14,66 +24,65 @@ module.exports = {
     themes: [
       {
         pastel: {
-          primary: "#93BBFB",
-          "primary-content": "#212638",
-          secondary: "#DAE8FF",
-          "secondary-content": "#212638",
-          accent: "#93BBFB",
-          "accent-content": "#212638",
-          neutral: "#212638",
-          "neutral-content": "#ffffff",
-          "base-100": "#ffffff",
-          "base-200": "#f4f8ff",
-          "base-300": "#DAE8FF",
-          "base-content": "#212638",
-          info: "#93BBFB",
-          success: "#34EEB6",
-          warning: "#FFCF72",
-          error: "#FF8863",
+          primary: "#F4B183", // Matte light orange (soft terracotta)
+          "primary-content": "#2D2D2D", // Dark gray for contrast
+          secondary: "#F7D7B4", // Muted peach for a secondary tone
+          "secondary-content": "#2D2D2D",
+          accent: "#F3C29B", // Subtle variation of light orange
+          "accent-content": "#2D2D2D",
+          neutral: "#F9E8D8", // Warm matte beige for neutral backgrounds
+          "neutral-content": "#2D2D2D",
+          "base-100": "#FFF9F3", // Light off-white
+          "base-200": "#F9E8D8", // Slightly darker beige
+          "base-300": "#F7D7B4", // Warm peach tone
+          "base-content": "#2D2D2D", // Dark for readable text
+          info: "#F8CBAE", // Muted light orange for informational elements
+          success: "#B7D6A5", // Soft green for success
+          warning: "#E7C86B", // Warm matte gold for warnings
+          error: "#D79B8B", // Muted matte coral for errors
 
-          "--rounded-btn": "9999rem",
+          "--rounded-btn": "0.5rem", // Subtle rounding for buttons
 
           ".tooltip": {
-            "--tooltip-tail": "6px",
+            "--tooltip-tail": "4px",
           },
           ".link": {
             textUnderlineOffset: "2px",
           },
           ".link:hover": {
-            opacity: "80%",
+            opacity: "85%",
           },
         },
       },
       {
         forest: {
-          primary: "#212638",
-          "primary-content": "#F9FBFF",
-          secondary: "#323f61",
-          "secondary-content": "#F9FBFF",
-          accent: "#4969A6",
-          "accent-content": "#F9FBFF",
-          neutral: "#F9FBFF",
-          "neutral-content": "#385183",
-          "base-100": "#385183",
-          "base-200": "#2A3655",
-          "base-300": "#212638",
-          "base-content": "#F9FBFF",
-          info: "#385183",
-          success: "#34EEB6",
-          warning: "#FFCF72",
-          error: "#FF8863",
+          primary: "#4A5A50", // Matte dark green (deep olive green)
+          "primary-content": "#E7EAE5", // Light for contrast
+          secondary: "#6C7A6F", // Muted moss green
+          "secondary-content": "#E7EAE5",
+          accent: "#5D7168", // Subtle mid-tone green
+          "accent-content": "#E7EAE5",
+          neutral: "#39473E", // Darker matte green-gray for neutral backgrounds
+          "neutral-content": "#D7E0D9",
+          "base-100": "#39473E", // Dark matte olive
+          "base-200": "#2E3B34", // Slightly darker tone
+          "base-300": "#1E2722", // Very dark green-gray
+          "base-content": "#D7E0D9", // Light green-gray for text
+          info: "#5D7168", // Muted dark green for informational elements
+          success: "#81A784", // Subtle moss green for success
+          warning: "#C9B574", // Matte gold-green for warnings
+          error: "#A76D66", // Muted brick-red for errors
 
-          "--rounded-btn": "9999rem",
+          "--rounded-btn": "0.5rem", // Subtle rounding for buttons
 
           ".tooltip": {
-            "--tooltip-tail": "6px",
-            "--tooltip-color": "oklch(var(--p))",
+            "--tooltip-tail": "4px",
           },
           ".link": {
             textUnderlineOffset: "2px",
           },
           ".link:hover": {
-            opacity: "80%",
+            opacity: "85%",
           },
         },
       },
@@ -100,6 +109,10 @@ module.exports = {
           800: "#27272a",
           900: "#18181b",
         },
+      },
+      backgroundImage: {
+        "forest-texture": "url('/textures/forest-branches.svg')",
+        "pastel-texture": "url('/textures/pastel-leaves.svg')",
       },
     },
   },
