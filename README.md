@@ -54,6 +54,8 @@ Rent2Own is a decentralized platform that allows users to rent NFTs with the opt
 
 The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, allowing users to eventually own the NFT by making monthly payments. Here's a breakdown of its functionalities:
 
+![Load NFT](./assets/load-nft.jpeg)
+
 - **Listing NFTs:** Lenders can list their NFTs by specifying the monthly payment and the total number of payments required for ownership.
 - **Starting Agreements:** Borrowers initiate agreements by making the first payment, which assigns them as the borrower.
 - **Making Payments:** Borrowers continue making monthly payments. Once all payments are made, ownership of the NFT is transferred to the borrower.
@@ -64,6 +66,7 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
 
 1. **List an NFT for Rent-to-Own:**
 
+   ![List NFT](./assets/lend-nft.jpeg)
     - **Function:** `listNFT`
     - **Parameters:**
         - `_nftContract`: Address of the ERC721 contract.
@@ -79,8 +82,9 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
 
 ### For Borrowers
 
-1. **Start an Agreement:**
+![Agreements](./assets/agreements.jpeg)
 
+1. **Start an Agreement:**
     - **Function:** `startAgreement`
     - **Parameters:**
         - `_agreementId`: ID of the rental agreement.
@@ -119,8 +123,6 @@ The `RentToOwn` smart contract facilitates rental agreements for ERC721 NFTs, al
 - 🧱 [**Components**](https://docs.scaffoldeth.io/components/): Collection of common web3 components to quickly build your frontend.
 - 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
 - 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
-
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
 
 ## Requirements
 
