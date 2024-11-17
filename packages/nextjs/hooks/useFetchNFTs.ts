@@ -1,7 +1,6 @@
 import { useAccount } from "wagmi";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import useNFTStore from "~~/services/store/useNFTStore";
-import { NFT } from "~~/types/NFT";
 import { notification } from "~~/utils/scaffold-eth";
 
 export function useFetchNFTs() {
