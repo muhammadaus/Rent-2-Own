@@ -14,6 +14,16 @@ const nextConfig = {
     config.externals.push("pino-pretty", "lokijs", "encoding");
     return config;
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "black-objective-gerbil-643.mypinata.cloud",
+        port: "",
+        pathname: "/ipfs/**",
+      },
+    ],
+  },
 };
 
 module.exports = nextConfig;

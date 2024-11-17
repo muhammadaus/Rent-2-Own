@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { parseEther } from "viem";
 import { useAccount, useWalletClient, useWriteContract } from "wagmi";
-import { useScaffoldContract, useScaffoldReadContract, useTransactor } from "~~/hooks/scaffold-eth";
+import { useScaffoldContract, useTransactor } from "~~/hooks/scaffold-eth";
 import { useFetchNFTs } from "~~/hooks/useFetchNFTs";
 import useNFTStore from "~~/services/store/useNFTStore";
 import { notification } from "~~/utils/scaffold-eth";
@@ -123,7 +124,7 @@ const RentToOwnPage = () => {
                 key={index}
               >
                 <figure>
-                  <img src={nft.tokenURI} alt={nft.name} />
+                  <Image width={900} height={900} src={nft.tokenURI} alt={nft.name} />
                 </figure>
                 <div className="card-body">
                   <h2 className="card-title">
