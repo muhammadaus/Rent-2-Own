@@ -1,4 +1,4 @@
-# Rent-2-Own(under development)
+# Rent2Own
 
 Taiko The Grant Factory Hackathon Project
 
