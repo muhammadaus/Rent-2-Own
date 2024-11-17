@@ -1,19 +1,22 @@
 import { useAccount } from "wagmi";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
+import useNFTStore from "~~/services/store/useNFTStore";
 import { NFT } from "~~/types/NFT";
 import { notification } from "~~/utils/scaffold-eth";
 
 export function useFetchNFTs() {
+  const { setNFTs, setLoading } = useNFTStore();
   const { address: connectedAddress } = useAccount();
-  const { data: myNFTContract } = useScaffoldContract({
+  const { data: myNFTContract, isLoading: myNFTIsLoading } = useScaffoldContract({
     contractName: "MyNFT",
   });
 
-  const fetchNFTs = async (currentNftAddress?: string): Promise<NFT[]> => {
-    if (!myNFTContract || !connectedAddress) {
+  const fetchNFTs = async (currentNftAddress?: string) => {
+    if (myNFTIsLoading || !myNFTContract) {
       notification.error("Contract not available.");
-      return [];
+      return;
     }
+    setLoading(true);
     const nfts = [];
     const contractAddress = currentNftAddress || myNFTContract.address;
 
@@ -38,11 +41,13 @@ export function useFetchNFTs() {
         }
       }
 
-      return nfts;
+      setNFTs(nfts);
     } catch (error) {
       console.error("Error fetching NFTs:", error);
       notification.error("Failed to load NFTs.");
       return [];
+    } finally {
+      setLoading(false);
     }
   };
 

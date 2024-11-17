@@ -5,6 +5,7 @@ import Image from "next/image";
 import { parseEther } from "viem";
 import { useAccount, useWalletClient, useWriteContract } from "wagmi";
 import { LoadNFTsComponent } from "~~/components/lend/LoadNFTs";
+import { EtherInput } from "~~/components/scaffold-eth";
 import { useScaffoldContract, useTransactor } from "~~/hooks/scaffold-eth";
 import { useFetchNFTs } from "~~/hooks/useFetchNFTs";
 import useNFTStore from "~~/services/store/useNFTStore";
@@ -18,7 +19,7 @@ const RentToOwnPage = () => {
   const [monthlyPayment, setMonthlyPayment] = useState<string>("");
   const [numberOfPayments, setNumberOfPayments] = useState<string>("");
 
-  const { nfts, selectedNft, isLoading, setNFTs, setLoading, setSelectedNft } = useNFTStore();
+  const { nfts, selectedNft, isLoading, setSelectedNft } = useNFTStore();
   const { fetchNFTs } = useFetchNFTs();
 
   const { data: walletClient } = useWalletClient({ account: connectedAddress });
@@ -32,26 +33,15 @@ const RentToOwnPage = () => {
   useEffect(() => {
     if (myNFTIsLoading || !myNFTContract || !connectedAddress) return;
 
-    const loadNFTs = async () => {
-      setLoading(true);
-      try {
-        const fetchedNFTs = await fetchNFTs();
-        setNFTs(fetchedNFTs);
-      } catch (err: unknown) {
-        notification.error((err as Error)?.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadNFTs();
+    void fetchNFTs();
+    setSelectedNft(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myNFTIsLoading, connectedAddress]);
 
   const handleLendNFT = useCallback(async () => {
     if (myNFTIsLoading || !myNFTContract) {
       notification.error("The NFT Contract is loading.");
-      return [];
+      return;
     }
     if (!selectedNft || !monthlyPayment || !numberOfPayments) {
       notification.error("Please fill in all fields");
@@ -70,7 +60,7 @@ const RentToOwnPage = () => {
 
       // 3. Get the RentToOwn contract using the constant
       // 4. Approve the NFT transfer
-      console.log("Approving NFT transfer...");
+      // console.log("Approving NFT transfer...");
       const approveNFT = () =>
         writeContractAsync({
           address: MyNFT.address,
@@ -78,17 +68,16 @@ const RentToOwnPage = () => {
           functionName: "approve",
           args: [RentToOwn.address, currentTokenId],
         });
-      const approveTx = await writeTx(approveNFT, { blockConfirmations: 1 });
-      console.log("Approval transaction:", approveTx);
+      await writeTx(approveNFT, { blockConfirmations: 1 });
 
       // 5. List the NFT
-      console.log("Listing NFT with parameters:", {
-        nftContract: selectedNft.contractAddress,
-        tokenId: currentTokenId,
-        monthlyPayment,
-        numberOfPayments,
-        typeof: typeof numberOfPayments,
-      });
+      // console.log("Listing NFT with parameters:", {
+      //   nftContract: selectedNft.contractAddress,
+      //   tokenId: currentTokenId,
+      //   monthlyPayment,
+      //   numberOfPayments,
+      //   typeof: typeof numberOfPayments,
+      // });
 
       const writeListNFT = () =>
         writeContractAsync({
@@ -98,9 +87,10 @@ const RentToOwnPage = () => {
           args: [selectedNft.contractAddress, currentTokenId, parseEther(monthlyPayment), numberOfPayments],
         });
 
-      const listTx = await writeTx(writeListNFT, { blockConfirmations: 1 });
+      await writeTx(writeListNFT, { blockConfirmations: 1 });
 
-      console.log("Listing transaction:", listTx);
+      void fetchNFTs();
+      setSelectedNft(null);
       notification.success("NFT listed successfully!");
     } catch (error: any) {
       console.error("Error:", error);
@@ -154,44 +144,49 @@ const RentToOwnPage = () => {
       </div>
 
       {selectedNft && (
-        <div className="bg-secondary rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-semibold mb-4">Lend NFT</h2>
-          <div className="mb-4">
-            <p className="text-lg mb-2">
-              Selected NFT: <span className="font-medium">{selectedNft.name}</span>
-            </p>
-            <p className="text-gray-500">Token ID: {selectedNft.tokenId}</p>
-          </div>
-
-          <div className="space-y-4 mb-6">
+        <div className="card glass lg:card-side bg-base-100 shadow-xl">
+          <figure>
+            <Image width={900} height={900} src={selectedNft.tokenURI} alt={selectedNft.name} />
+          </figure>
+          <div className="card-body">
+            <h2 className="card-title text-2xl font-semibold">Lend NFT</h2>
             <div>
-              <label className="block text-sm font-medium mb-2">Monthly Payment (ETH)</label>
-              <input
-                type="text"
-                placeholder="0.1"
-                value={monthlyPayment}
-                onChange={e => setMonthlyPayment(e.target.value)}
-                className="w-full text-secondary p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <p className="text-lg mb-2">
+                Selected NFT: <span className="font-medium">{selectedNft.name}</span>
+              </p>
+              <p>Token ID: {selectedNft.tokenId}</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Number of Payments</label>
-              <input
-                type="text"
-                placeholder="12"
-                value={numberOfPayments}
-                onChange={e => setNumberOfPayments(e.target.value)}
-                className="w-full text-secondary p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Monthly Payment (ETH)</label>
+                <EtherInput
+                  usdMode={false}
+                  placeholder="0.1"
+                  value={monthlyPayment}
+                  onChange={amount => setMonthlyPayment(amount)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Number of Payments</label>
+                <input
+                  type="text"
+                  placeholder="12"
+                  value={numberOfPayments}
+                  onChange={e => setNumberOfPayments(e.target.value)}
+                  className="w-full text-secondary p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="card-actions justify-end">
+              <button
+                onClick={handleLendNFT}
+                className="w-full btn btn-primary bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors font-medium"
+              >
+                List NFT for Rent-to-Own
+              </button>
             </div>
           </div>
-
-          <button
-            onClick={handleLendNFT}
-            className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors font-medium"
-          >
-            List NFT for Rent-to-Own
-          </button>
         </div>
       )}
     </div>
