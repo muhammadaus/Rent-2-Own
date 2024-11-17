@@ -18,7 +18,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "black-objective-gerbil-643.mypinata.cloud",
+        hostname: "*.mypinata.cloud",
         port: "",
         pathname: "/ipfs/**",
       },

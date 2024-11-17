@@ -18,6 +18,7 @@ const RentToOwnPage = () => {
 
   const [monthlyPayment, setMonthlyPayment] = useState<string>("");
   const [numberOfPayments, setNumberOfPayments] = useState<string>("");
+  const [nftImages, setNftImages] = useState<Record<string, string>>({});
 
   const { nfts, selectedNft, isLoading, setSelectedNft } = useNFTStore();
   const { fetchNFTs } = useFetchNFTs();
@@ -37,6 +38,23 @@ const RentToOwnPage = () => {
     setSelectedNft(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myNFTIsLoading, connectedAddress]);
+
+  useEffect(() => {
+    nfts.forEach(async nft => {
+      try {
+        const response = await fetch(nft.tokenURI);
+        const metadata = await response.json();
+        if (metadata?.image) {
+          setNftImages(prev => ({
+            ...prev,
+            [nft.tokenId]: metadata.image,
+          }));
+        }
+      } catch (error) {
+        console.error(`Failed to fetch metadata for NFT ${nft.tokenId}:`, error);
+      }
+    });
+  }, [nfts]);
 
   const handleLendNFT = useCallback(async () => {
     if (myNFTIsLoading || !myNFTContract) {
@@ -119,7 +137,11 @@ const RentToOwnPage = () => {
                 key={index}
               >
                 <figure>
-                  <Image width={900} height={900} src={nft.tokenURI} alt={nft.name} />
+                  {nftImages[nft.tokenId] ? (
+                    <Image width={900} height={900} src={nftImages[nft.tokenId]} alt={nft.name} />
+                  ) : (
+                    <p>Loading image...</p>
+                  )}
                 </figure>
                 <div className="card-body">
                   <h2 className="card-title">
@@ -146,7 +168,11 @@ const RentToOwnPage = () => {
       {selectedNft && (
         <div className="card glass lg:card-side bg-base-100 shadow-xl">
           <figure>
-            <Image width={900} height={900} src={selectedNft.tokenURI} alt={selectedNft.name} />
+            {nftImages[selectedNft.tokenId] ? (
+              <Image width={900} height={900} src={nftImages[selectedNft.tokenId]} alt={selectedNft.name} />
+            ) : (
+              <p>Loading image...</p>
+            )}
           </figure>
           <div className="card-body">
             <h2 className="card-title text-2xl font-semibold">Lend NFT</h2>
