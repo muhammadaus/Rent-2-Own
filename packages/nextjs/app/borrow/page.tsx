@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { parseEther } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
 import { SkipTimeComponent } from "~~/components/dev/SkipTimeComponent";
 import { Address } from "~~/components/scaffold-eth";
@@ -39,8 +40,7 @@ export default function BorrowPage() {
             abi: RentToOwn.abi,
             functionName: "startAgreement",
             args: [id as unknown as bigint],
-            //TODO
-            // value: monthlyPayment,
+            value: parseEther(monthlyPayment),
           });
         const approveTx = await writeTx(startAgreement, { blockConfirmations: 1 });
         console.log("Agreement started:", approveTx);
@@ -64,8 +64,7 @@ export default function BorrowPage() {
             abi: RentToOwn.abi,
             functionName: "makePayment",
             args: [id as unknown as bigint],
-            //TODO
-            // value: monthlyPayment,
+            value: parseEther(monthlyPayment),
           });
         const approveTx = await writeTx(makePayment, { blockConfirmations: 1 });
         console.log("Agreement started:", approveTx);
