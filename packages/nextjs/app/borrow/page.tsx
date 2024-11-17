@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
+import Image from "next/image";
 import { parseEther } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
 import { Address } from "~~/components/scaffold-eth";
@@ -90,11 +91,14 @@ export default function BorrowPage() {
       {!isLoading && !error && agreements.length === 0 && <p>No agreements available.</p>}
 
       {!isLoading && !error && agreements.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {agreements
             .filter(a => a.isActive && a.borrower === "0x0000000000000000000000000000000000000000")
             .map(agreement => (
-              <div key={agreement.id} className="card bg-primary text-primary-content w-96">
+              <div key={agreement.id} className="card card-side bg-base-100 shadow-xl">
+                <figure>
+                  <Image width={900} height={900} src={agreement.tokenURI} alt={agreement.nftId} />
+                </figure>
                 <div className="card-body">
                   <h2 className="card-title">Agreement #{agreement.id}</h2>
                   <p>
@@ -113,7 +117,7 @@ export default function BorrowPage() {
                   <div className="card-actions justify-end">
                     <button
                       onClick={() => startAgreement(agreement.id, agreement.monthlyPayment)}
-                      className="btn mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                      className="btn btn-primary"
                     >
                       Start Agreement
                     </button>
@@ -133,39 +137,42 @@ export default function BorrowPage() {
       )}
 
       {!isLoading && !error && agreements.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {agreements
             .filter(a => a.isActive && a.borrower === connectedAddress)
             .map(agreement => (
-              <div key={agreement.id} className="card bg-primary text-primary-content w-96">
+              <div key={agreement.id} className="card card-side glass bg-base-100 shadow-xl">
+                <figure>
+                  <Image width={900} height={900} src={agreement.tokenURI} alt={agreement.nftId} />
+                </figure>
                 <div className="card-body">
                   <h2 className="card-title">Agreement #{agreement.id}</h2>
-                  <p>
+                  <div>
                     <span className="font-medium">NFT Contract:</span>
                     {agreement?.nftContract && <Address address={agreement.nftContract} />}
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <span className="font-medium">NFT ID:</span> {agreement.nftId}
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <span className="font-medium">Monthly Payment:</span> {agreement.monthlyPayment.toString()} ETH
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <span className="font-medium">Total Price:</span> {agreement.totalPrice} ETH
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <span className="font-medium">Total Paid:</span> {agreement.totalPaid} ETH
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <span className="font-medium">Next Payment Due:</span> {agreement.nextPaymentDue}
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <span className="font-medium">Remaining:</span> {agreement.totalRemaining.toString()} ETH
-                  </p>
-                  <div className="card-actions justify-end">
+                  </div>
+                  <div className="card-actions justify-end mt-4">
                     <button
                       onClick={() => makePayment(agreement.id, agreement.monthlyPayment)}
-                      className="btn mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                      className="btn btn-primary"
                     >
                       Make Payment
                     </button>

@@ -9,9 +9,12 @@ export const useFetchAgreements = () => {
   const { data: rentToOwnContract, isLoading: rentToOwnContractLoading } = useScaffoldContract({
     contractName: "RentToOwn",
   });
+  const { data: myNFTContract, isLoading: myNFTIsLoading } = useScaffoldContract({
+    contractName: "MyNFT",
+  });
 
   const fetchAgreements = async (): Promise<void> => {
-    if (rentToOwnContractLoading || !rentToOwnContract) {
+    if (rentToOwnContractLoading || !rentToOwnContract || myNFTIsLoading || !myNFTContract) {
       notification.error("Contract instance is not available.");
       return;
     }
@@ -26,6 +29,8 @@ export const useFetchAgreements = () => {
       const agreements: Agreement[] = [];
       for (let i = 0; i < agreementCounter; i++) {
         const agreement = await rentToOwnContract.read.agreements([BigInt(i)]);
+        //TODO allow using a different NFT contract
+        const tokenURI = await myNFTContract.read.tokenURI([agreement[3]]);
         const totalPrice = agreement[5];
         const totalPaid = agreement[6];
 
@@ -41,6 +46,7 @@ export const useFetchAgreements = () => {
           totalPrice: formatEther(agreement[5]),
           totalPaid: formatEther(agreement[6]),
           totalRemaining: formatEther(BigInt(totalPrice - totalPaid)),
+          tokenURI,
         });
       }
 

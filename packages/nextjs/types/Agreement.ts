@@ -4,6 +4,7 @@ export interface Agreement {
   lender: string;
   nftContract: string;
   nftId: string;
+  tokenURI: string;
   monthlyPayment: string;
   totalPrice: string;
   totalPaid: string;
