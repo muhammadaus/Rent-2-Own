@@ -3,7 +3,6 @@
 import { useCallback, useEffect } from "react";
 import { parseEther } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
-import { SkipTimeComponent } from "~~/components/dev/SkipTimeComponent";
 import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldContract, useTransactor } from "~~/hooks/scaffold-eth";
 import { useFetchAgreements } from "~~/hooks/useFetchAgreements";
@@ -83,8 +82,6 @@ export default function BorrowPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">NFT Rent-to-Own Agreements</h1>
-
-      {/*<SkipTimeComponent />*/}
 
       <h2 className="text-2xl font-bold mb-6 mt-6">Available Agreements</h2>
       {isLoading && <p>Loading agreements...</p>}
