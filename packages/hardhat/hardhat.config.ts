@@ -15,6 +15,7 @@ const deployerPrivateKey =
   process.env.DEPLOYER_PRIVATE_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 // If not set, it uses ours Etherscan default API key.
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY || "DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW";
+const taikoscanApiKey = process.env.TAIKOSCAN_API_KEY || "Y1Q1TNE8HJS4G8NIJCDSDIWVMDW3R46S4Z";
 // forking rpc url
 const forkingURL = process.env.FORKING_URL || "";
 
@@ -121,15 +122,39 @@ const config: HardhatUserConfig = {
       url: "https://sepolia.publicgoods.network",
       accounts: [deployerPrivateKey],
     },
+    taiko: {
+      url: "https://rpc.mainnet.taiko.xyz",
+      chainId: 167000,
+      accounts: [deployerPrivateKey], // Ensure your private key is set in the environment variables
+    },
   },
   // configuration for harhdat-verify plugin
   etherscan: {
-    apiKey: `${etherscanApiKey}`,
+    // apiKey: `${etherscanApiKey}`,
+    apiKey: {
+      taiko: `${taikoscanApiKey}`,
+    },
+    customChains: [
+      {
+        network: "taiko",
+        chainId: 167000,
+        urls: {
+          apiURL: "https://api.taikoscan.io/api",
+          browserURL: "https://taikoscan.io",
+        },
+      },
+    ],
   },
+  // taikoscan: {
+  //   apiKey: `${taikoscanApiKey}`,
+  // },
   // configuration for etherscan-verify from hardhat-deploy plugin
   verify: {
     etherscan: {
       apiKey: `${etherscanApiKey}`,
+    },
+    taikoscan: {
+      apiKey: `${taikoscanApiKey}`,
     },
   },
   sourcify: {
