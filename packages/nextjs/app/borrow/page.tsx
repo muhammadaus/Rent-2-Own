@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { SkipTimeComponent } from "~~/components/dev/SkipTimeComponent";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useAgreements } from "~~/hooks/useAgreements";
+import { notification } from "~~/utils/scaffold-eth";
 
 export default function BorrowPage() {
   const { address: connectedAddress } = useAccount();
@@ -26,13 +27,14 @@ export default function BorrowPage() {
           args: [id as unknown as bigint],
           value: monthlyPayment,
         });
-        alert("Agreement started successfully!");
+        notification.success("Agreement started successfully!");
         reloadAgreements();
       } catch (e) {
         console.log({ e });
-        alert("Failed to start agreement. Please try again.");
+        notification.error("Failed to start agreement. Please try again.");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [agreements, reloadAgreements],
   );
 
@@ -44,13 +46,14 @@ export default function BorrowPage() {
           args: [id as unknown as bigint],
           value: monthlyPayment,
         });
-        alert("Payment made successfully!");
+        notification.success("Payment made successfully!");
         reloadAgreements();
       } catch (e) {
         console.log({ e });
-        alert("Failed to make payment. Please try again.");
+        notification.error("Failed to make payment. Please try again.");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [agreements, reloadAgreements],
   );
 
