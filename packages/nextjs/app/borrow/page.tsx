@@ -84,7 +84,7 @@ export default function BorrowPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">NFT Rent-to-Own Agreements</h1>
 
-      <SkipTimeComponent />
+      {/*<SkipTimeComponent />*/}
 
       <h2 className="text-2xl font-bold mb-6 mt-6">Available Agreements</h2>
       {isLoading && <p>Loading agreements...</p>}
